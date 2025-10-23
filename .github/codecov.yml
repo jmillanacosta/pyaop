@@ -1,0 +1,4 @@
+# see https://docs.codecov.com/v4.6/docs/codecov-yaml
+ignore:
+  - "src/pyaop/__main__.py"
+  - "src/pyaop/cli.py"

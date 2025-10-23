@@ -1,0 +1,31 @@
+{
+  "template": "https://github.com/cthoyt/cookiecutter-snekpack",
+  "commit": "9e91376bfbc5bb2cd59e325ef1dc289a961e5aa4",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "package_name": "pyaop",
+      "package_name_stylized": "pyAOP",
+      "short_description": "",
+      "author_name": "Javier Millan Acosta",
+      "author_github": "jmillanacosta",
+      "author_email": "javier.millanacosta@maastrichtuniversity.nl",
+      "github_organization_name": "",
+      "github_repository_name": "pyaop",
+      "command_line_interface": false,
+      "gitlab": false,
+      "runner": "tox",
+      "__not_charlie": "true",
+      "__runner": "tox -e",
+      "__runner_uv": "--with tox-uv tox -e",
+      "__runner_pip": "tox tox-uv",
+      "__runner_install_uv": "uv tool install tox --with tox-uv",
+      "__runner_install_pip": "python3 -m pip install tox tox-uv",
+      "__runner_tests": "py",
+      "__gh_slug": "/pyaop",
+      "_template": "https://github.com/cthoyt/cookiecutter-snekpack",
+      "_commit": "9e91376bfbc5bb2cd59e325ef1dc289a961e5aa4"
+    }
+  },
+  "directory": null
+}
