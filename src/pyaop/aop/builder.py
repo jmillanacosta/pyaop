@@ -7,7 +7,6 @@ including the main AOPNetworkBuilder class.
 """
 
 import logging
-from dataclasses import dataclass
 from typing import Any
 
 from pyaop.aop.associations import (
@@ -24,20 +23,14 @@ from pyaop.aop.core_model import (
     AOPNetwork,
     KeyEventRelationship,
 )
+
 from pyaop.cytoscape.elements import CytoscapeEdge, CytoscapeNode
+
 from pyaop.queries.aopwikirdf import AOPQueryService
+from pyaop.queries.base_query_service import QueryResult
+from pyaop.queries.bgee import BgeeQueryService
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class QueryResult:
-    """Container for query results with metadata"""
-
-    data: dict[str, Any]
-    query: str
-    success: bool = True
-    error: str | None = None
 
 
 class SPARQLResultProcessor:
@@ -324,10 +317,10 @@ class AOPNetworkBuilder:
 
     def __init__(self):
         self.network = AOPNetwork()
-        self._query_service = AOPQueryService()
+        self._aop_query_service = AOPQueryService()
         self._aop_processor = AOPSPARQLProcessor()
         self._assoc_processor = AssociationProcessor()
-
+        self._bgee_query_service = BgeeQueryService()
     def query_by_identifier(
         self, query_type: str, values: str
     ) -> tuple[AOPNetwork, str]:
@@ -355,7 +348,7 @@ class AOPNetworkBuilder:
     def _execute_aop_query(self, query_type: str, values: str) -> QueryResult:
         """Execute AOP SPARQL query and return structured result"""
         try:
-            query = self._query_service.build_aop_sparql_query(
+            query = self._aop_query_service.build_aop_sparql_query(
                 query_type, values
             )
             if not query:
@@ -366,7 +359,7 @@ class AOPNetworkBuilder:
                     error=f"Invalid query type: {query_type}"
                 )
 
-            results = self._query_service.execute_sparql_query(query)
+            results = self._aop_query_service.execute_sparql_query(query)
             bindings = results.get('results', {}).get('bindings', [])
             logger.debug(f"Retrieved {len(bindings)} bindings")
 
@@ -397,44 +390,16 @@ class AOPNetworkBuilder:
 
         # AOP infos are already added through key events
 
-    def query_genes_for_ke(
-        self, include_proteins: bool = True
-    ) -> tuple[AOPNetwork, str]:
-        """Query gene associations for all KEs in the network"""
-        try:
-            ke_uris = self.network.get_ke_uris()
-            if not ke_uris:
-                logger.warning("No Key Events found for gene querying")
-                return self.network, "# No KEs to query"
-
-            # Execute gene query
-            query_result = self._execute_gene_query(ke_uris, include_proteins)
-            if not query_result.success:
-                logger.error(f"Gene query failed: {query_result.error}")
-                return self.network, "# Gene query failed"
-
-            # Process results
-            self._process_gene_query_results(
-                query_result.data, include_proteins
-            )
-
-            self.network = self._build_network()
-            return self.network, query_result.query
-
-        except Exception as e:
-            logger.error(f"Failed to query genes for network: {e}")
-            return self.network, "# Gene query failed"
-
     def _execute_gene_query(
         self, ke_uris: list[str], include_proteins: bool = True
     ) -> QueryResult:
         """Execute gene association query"""
         try:
             formatted_uris = " ".join([f"<{uri}>" for uri in ke_uris])
-            query = self._query_service.build_gene_sparql_query(
+            query = self._aop_query_service.build_gene_sparql_query(
                 formatted_uris, include_proteins
             )
-            results = self._query_service.execute_sparql_query(query)
+            results = self._aop_query_service.execute_sparql_query(query)
             return QueryResult(data=results, query=query, success=True)
         except Exception as e:
             return QueryResult(
@@ -522,24 +487,126 @@ class AOPNetworkBuilder:
         """Execute compound association query"""
         try:
             formatted_uris = " ".join([f"<https://identifiers.org/aop/{uri}>" for uri in aop_uris])
-            query = self._query_service.build_compound_sparql_query(
+            query = self._aop_query_service.build_compound_sparql_query(
                 formatted_uris
             )
-            results = self._query_service.execute_sparql_query(query)
+            results = self._aop_query_service.execute_sparql_query(query)
             return QueryResult(data=results, query=query, success=True)
         except Exception as e:
             return QueryResult(
                 data={}, query="", success=False, error=str(e)
             )
 
+    def query_gene_expression(
+            self,
+            confidence_level: int,
+            source: str = "bgee",
+            ) -> tuple[AOPNetwork, str]:
+        """Query gene expression values for all KEs in the network"""
+        try:
+            gene_ids = self.network.get_gene_ids()
+            organ_ids = self.network.get_organ_ids()
+            if not [gene_ids, organ_ids]:
+                return self.network, "# No genes and organs to query"
+
+            # Execute gene expression query
+            updated_network, query = self._execute_gene_expression_query(
+                confidence_level=confidence_level,
+                source=source
+            )
+            self.network = updated_network
+            return self.network, query
+
+        except Exception as e:
+            logger.error(f"Failed to query genes for network: {e}")
+            return self.network, "# Gene query failed"
+
+    def query_genes_for_ke(
+        self, include_proteins: bool = True
+    ) -> tuple[AOPNetwork, str]:
+        """Query gene associations for all KEs in the network"""
+        try:
+            ke_uris = self.network.get_ke_uris()
+            if not ke_uris:
+                logger.warning("No Key Events found for gene querying")
+                return self.network, "# No KEs to query"
+
+            # Execute gene query
+            query_result = self._execute_gene_query(ke_uris, include_proteins)
+            if not query_result.success:
+                logger.error(f"Gene query failed: {query_result.error}")
+                return self.network, "# Gene query failed"
+
+            # Process results
+            self._process_gene_query_results(
+                query_result.data, include_proteins
+            )
+
+            self.network = self._build_network()
+            return self.network, query_result.query
+
+        except Exception as e:
+            logger.error(f"Failed to query genes for network: {e}")
+            return self.network, "# Gene query failed"
+
+    def _execute_gene_expression_query(
+        self,
+        confidence_level: int = 50,
+        source: str = "bgee"
+    ) -> tuple[AOPNetwork, str]:
+        """Executes gene expression query"""
+        try:
+            # Get gene and organ IDs from current network
+            gene_ids = self.network.get_gene_ids()
+            organ_ids = self.network.get_organ_ids()
+            
+            # Format for SPARQL query
+            formatted_gene_ids = [f'"{eid}"' for eid in gene_ids if eid]
+            formatted_organ_ids = [f'"{oid}"' for oid in organ_ids if oid]
+            
+            # Build and execute query
+            query = self._bgee_query_service.build_gene_expressions_query(
+                formatted_gene_ids, formatted_organ_ids, confidence_level
+            )
+            results = self._bgee_query_service.execute_sparql_query(query)
+            
+            # Process results into associations
+            gene_expression_results = results.get("results", {}).get("bindings", [])
+            for result in gene_expression_results:
+                try:
+                    gene_id = result.get("gene_id", {}).get("value", "")
+                    if not gene_id:
+                        continue
+
+                    association = GeneExpressionAssociation(
+                        gene_id=gene_id,
+                        anatomical_id=result.get("anatomical_entity_id", {}).get("value", ""),
+                        anatomical_name=result.get("anatomical_entity_name", {}).get("value", ""),
+                        expression_level=result.get("expression_level", {}).get("value", ""),
+                        confidence_id=result.get("confidence_level_id", {}).get("value", ""),
+                        confidence_level_name=result.get("confidence_level_name", {}).get("value", ""),
+                        developmental_id=result.get("developmental_stage_id", {}).get("value", ""),
+                        developmental_stage_name=result.get("developmental_stage_name", {}).get("value", ""),
+                        expr=result.get("expr", {}).get("value", ""),
+                    )
+                    self.network.add_gene_expression_association(association)
+                except Exception as e:
+                    logger.warning(f"Failed to process gene expression result: {e}")
+                    continue
+            
+            return self.network, query
+        except Exception as e:
+            logger.error(f"Failed to execute gene expression query: {e}")
+            return self.network, "# Gene expression query failed"
+
     def _execute_organ_query(self, ke_uris: list[str]) -> QueryResult:
         """Execute organ association query"""
         try:
             formatted_uris = " ".join([f"<{uri}>" for uri in ke_uris])
-            query = self._query_service.build_organ_sparql_query(
+            query = self._aop_query_service.build_organ_sparql_query(
                 formatted_uris
             )
-            results = self._query_service.execute_sparql_query(query)
+            results = self._aop_query_service.execute_sparql_query(query)
             return QueryResult(data=results, query=query, success=True)
         except Exception as e:
             return QueryResult(
@@ -552,10 +619,10 @@ class AOPNetworkBuilder:
         """Execute component association query"""
         try:
             formatted_uris = " ".join([f"<{uri}>" for uri in ke_uris])
-            query = self._query_service.build_components_sparql_query(
+            query = self._aop_query_service.build_components_sparql_query(
                 go_only, formatted_uris
             )
-            results = self._query_service.execute_sparql_query(query)
+            results = self._aop_query_service.execute_sparql_query(query)
             return QueryResult(data=results, query=query, success=True)
         except Exception as e:
             return QueryResult(
@@ -594,43 +661,4 @@ class AOPNetworkBuilder:
 
     def _build_network(self) -> AOPNetwork:
         """Build and return the current network state"""
-        return self.network
-
-    def add_gene_expression_associations(
-        self, gene_expression_results: list[dict[str, Any]]
-    ):
-        """Add gene expression associations from query results"""
-        for result in gene_expression_results:
-            try:
-                gene_id = result.get("gene_id", "")
-                if not gene_id:
-                    continue
-
-                association = GeneExpressionAssociation(
-                    gene_id=gene_id,
-                    anatomical_id=result.get("anatomical_entity_id", ""),
-                    anatomical_name=result.get("anatomical_entity_name", ""),
-                    expression_level=result.get("expression_level", ""),
-                    confidence_id=result.get("confidence_level_id", ""),
-                    confidence_level_name=result.get(
-                        "confidence_level_name", ""
-                    ),
-                    developmental_id=result.get("developmental_stage_id", ""),
-                    developmental_stage_name=result.get(
-                        "developmental_stage_name", ""
-                    ),
-                    expr=result.get("expr", ""),
-                )
-                self.network.add_gene_expression_association(association)
-            except Exception as e:
-                logger.warning(
-                    f"Failed to process gene expression result: {e}"
-                )
-                continue
-
-    def build(self) -> AOPNetwork:
-        """Return the constructed network (deprecated - use _build_network)"""
-        logger.warning(
-            "build() method is deprecated, use _build_network() instead"
-        )
         return self.network

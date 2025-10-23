@@ -5,32 +5,26 @@ Prepare, send and retrieve query (results).
 """
 
 import logging
-from typing import Any
-
-import requests
+from pyaop.queries.base_query_service import BaseQueryService
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
-AOPWIKISPARQL_ENDPOINT = "https://aopwiki.rdf.bigcat-bioinformatics.org/sparql/"
+AOPWIKISPARQL_ENDPOINT = (
+    "https://aopwiki.rdf.bigcat-bioinformatics.org/sparql/"
+)
 AOPDBSPARQL_ENDPOINT = "https://aopdb.org/sparql/"
 
-class SPARQLQueryError(Exception):
-    """Custom exception for SPARQL query errors"""
 
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return f"SPARQLQueryError: {self.message}"
-
-
-class AOPQueryService:
+class AOPQueryService(BaseQueryService):
     """Service for querying AOP data from SPARQL endpoint"""
 
     def __init__(self):
-        self.endpoint = AOPWIKISPARQL_ENDPOINT # Current mirror
+        super().__init__(endpoint=AOPWIKISPARQL_ENDPOINT, timeout=10)
+
+    def get_service_name(self) -> str:
+        """Return the name of the service for logging"""
+        return "AOP-Wiki"
 
     def build_aop_sparql_query(self, query_type: str, values: str) -> str:
         """Build SPARQL query for AOP data"""
@@ -84,7 +78,9 @@ class AOPQueryService:
 
         return final_query
 
-    def build_gene_sparql_query(self, ke_uris: str, include_proteins: bool = True) -> str:
+    def build_gene_sparql_query(
+        self, ke_uris: str, include_proteins: bool = True
+    ) -> str:
         """Build SPARQL query for gene data"""
         if include_proteins:
             return f"""
@@ -136,7 +132,9 @@ class AOPQueryService:
         }}
         """
 
-    def build_components_sparql_query(self, go_only: bool, ke_uris: str) -> str:
+    def build_components_sparql_query(
+        self, go_only: bool, ke_uris: str
+    ) -> str:
         """Build SPARQL query for GO process data"""
         if go_only:
             go_filter = 'FILTER(STRSTARTS(STR(?process), "http://purl.obolibrary.org/obo/GO_"))'
@@ -156,36 +154,6 @@ class AOPQueryService:
             ORDER BY ?ke
         """
 
-    def execute_sparql_query(self, query: str) -> dict[str, Any]:
-        """Execute SPARQL query with standardized error handling"""
-        logger.info(f"Executing SPARQL query (length: {len(query)})")
-
-        try:
-            response = requests.get(
-                self.endpoint,
-                params={"query": query, "format": "json"},
-                timeout=10,
-            )
-            logger.debug(f"SPARQL response status: {response.status_code}")
-            response.raise_for_status()
-
-            data = response.json()
-            bindings = data.get("results", {}).get("bindings", [])
-            logger.info(f"Retrieved {len(bindings)} SPARQL result bindings")
-
-            return data
-
-        except requests.exceptions.Timeout:
-            raise SPARQLQueryError("SPARQL query timeout")
-        except requests.exceptions.ConnectionError:
-            raise SPARQLQueryError("Failed to connect to SPARQL endpoint")
-        except requests.exceptions.HTTPError as e:
-            raise SPARQLQueryError(f"HTTP error {e.response.status_code}: {e}")
-        except requests.exceptions.RequestException as e:
-            raise SPARQLQueryError(f"Request error: {e!s}")
-        except ValueError as e:
-            raise ValueError(f"Invalid JSON response: {e!s}")
-
 
 # Global service instance
-# aop_query_service = AOPQueryService()
+aop_query_service = AOPQueryService()
