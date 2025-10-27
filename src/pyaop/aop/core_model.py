@@ -39,6 +39,40 @@ class AOPInfo:
     def __str__(self) -> str:
         return f"AOP(id:{self.aop_id}, title:'{self.title}', URI:{self.uri})"
 
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["AOPInfo"]:
+        """Parse AOP information from Cytoscape elements"""
+        aop_infos = {}  # Use dict to avoid duplicates
+        
+        for element in elements:
+            if element.get("group") != "edges" and "data" in element:
+                data = element["data"]
+                
+                # Extract AOP information from node data
+                aop_uris = data.get("aop_uris", [])
+                aop_titles = data.get("aop_titles", [])
+                
+                # Handle single values as well as lists
+                if not isinstance(aop_uris, list):
+                    aop_uris = [aop_uris] if aop_uris else []
+                if not isinstance(aop_titles, list):
+                    aop_titles = [aop_titles] if aop_titles else []
+                
+                # Process each AOP URI/title pair
+                for aop_uri, aop_title in zip(aop_uris, aop_titles):
+                    if aop_uri and aop_title:
+                        # Extract AOP ID from URI
+                        aop_id = aop_uri.split("/")[-1] if "/" in aop_uri else aop_uri
+                        
+                        # Create AOPInfo if not already exists
+                        if aop_id not in aop_infos:
+                            try:
+                                aop_info = cls(aop_id=aop_id, title=aop_title, uri=aop_uri)
+                                aop_infos[aop_id] = aop_info
+                            except ValueError as e:
+                                logger.warning(f"Failed to create AOPInfo: {e}")
+        
+        return list(aop_infos.values())
 
 @dataclass
 class AOPKeyEvent:
@@ -135,28 +169,140 @@ class AOPNetwork:
         return (f"AOPNetwork({len(self.key_events)} KEs, "
                 f"{len(self.relationships)} KERs, {len(self.aop_info)} AOPs)")
 
-    @classmethod
-    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> "AOPNetwork":
-        """Create AOPNetwork from Cytoscape elements - puts ALL nodes and edges into the network"""
-        network = cls()
-
+    def from_cytoscape_elements(self, elements: list[dict[str, Any]]) -> None:
+        """Populate AOPNetwork from Cytoscape elements - parse back into full data model"""
         # Parse all elements using the parser
         parser = CytoscapeNetworkParser(elements)
 
         # Add ALL nodes to the network
-        network.node_list = parser.nodes
+        self.node_list = parser.nodes
 
         # Add ALL edges to the network
-        network.edge_list = parser.edges
+        self.edge_list = parser.edges
 
         # Store original elements for position and style extraction
-        network._original_elements = elements
+        self._original_elements = elements
+
+        # Parse back into data model associations
+        self._parse_associations_from_elements(elements)
+        
+        # Parse AOPInfo, KeyEvents and relationships from elements
+        self._parse_aop_info_from_elements(elements)
+        self._parse_key_events_from_elements(elements)
+        self._parse_relationships_from_elements(elements)
 
         logger.info(
-            f"Created AOPNetwork from {len(elements)} Cytoscape elements: {len(network.node_list)} nodes, {len(network.edge_list)} edges"
+            f"Populated AOPNetwork from {len(elements)} Cytoscape elements: "
+            f"{len(self.node_list)} nodes, {len(self.edge_list)} edges, "
+            f"{len(self.key_events)} KEs, {len(self.relationships)} KERs, "
+            f"{len(self.aop_info)} AOPs"
         )
 
-        return network
+    def _parse_associations_from_elements(self, elements: list[dict[str, Any]]) -> None:
+        """Parse all association types from Cytoscape elements"""
+        # Parse gene associations
+        gene_associations = GeneAssociation.from_cytoscape_elements(elements)
+        self.gene_associations.extend(gene_associations)
+
+        # Parse component associations  
+        component_associations = ComponentAssociation.from_cytoscape_elements(elements)
+        self.component_associations.extend(component_associations)
+
+        # Parse compound associations
+        compound_associations = CompoundAssociation.from_cytoscape_elements(elements)
+        self.compound_associations.extend(compound_associations)
+
+        # Parse gene expression associations
+        gene_expression_associations = GeneExpressionAssociation.from_cytoscape_elements(elements)
+        self.gene_expression_associations.extend(gene_expression_associations)
+
+        # Parse organ associations
+        organ_associations = OrganAssociation.from_cytoscape_elements(elements)
+        self.organ_associations.extend(organ_associations)
+
+    def _parse_aop_info_from_elements(self, elements: list[dict[str, Any]]) -> None:
+        """Parse AOP information from Cytoscape elements using AOPInfo parser"""
+        # Use the AOPInfo class parser
+        aop_infos = AOPInfo.from_cytoscape_elements(elements)
+        
+        # Add to network's aop_info dict
+        for aop_info in aop_infos:
+            if aop_info.aop_id not in self.aop_info:
+                self.aop_info[aop_info.aop_id] = aop_info
+        
+        logger.debug(f"Parsed {len(aop_infos)} AOP info objects from elements")
+
+    def _parse_key_events_from_elements(self, elements: list[dict[str, Any]]) -> None:
+        """Parse Key Events from Cytoscape elements"""
+        for element in elements:
+            if element.get("group") != "edges" and "data" in element:
+                data = element["data"]
+                node_type = data.get("type", "")
+                
+                # Check if it's a Key Event node
+                if node_type in [NodeType.MIE.value, NodeType.AO.value, NodeType.KE.value]:
+                    ke_uri = data.get("id", "")
+                    if ke_uri and ke_uri.startswith("https://identifiers.org/aop.events/"):
+                        ke_id = ke_uri.split("/")[-1]
+                        ke_title = data.get("label", "")
+                        
+                        # Determine KE type
+                        if node_type == NodeType.MIE.value:
+                            ke_type = NodeType.MIE
+                        elif node_type == NodeType.AO.value:
+                            ke_type = NodeType.AO
+                        else:
+                            ke_type = NodeType.KE
+                        
+                        # Create Key Event
+                        key_event = AOPKeyEvent(
+                            ke_id=ke_id,
+                            uri=ke_uri,
+                            title=ke_title,
+                            ke_type=ke_type
+                        )
+                        
+                        # Add associated AOPs
+                        aop_uris = data.get("aop_uris", [])
+                        aop_titles = data.get("aop_titles", [])
+                        for aop_uri, aop_title in zip(aop_uris, aop_titles):
+                            if aop_uri and aop_title:
+                                aop_id = aop_uri.split("/")[-1] if "/" in aop_uri else aop_uri
+                                aop_info = AOPInfo(aop_id=aop_id, title=aop_title, uri=aop_uri)
+                                key_event.add_aop(aop_info)
+                        
+                        self.key_events[ke_uri] = key_event
+
+    def _parse_relationships_from_elements(self, elements: list[dict[str, Any]]) -> None:
+        """Parse Key Event Relationships from Cytoscape elements"""
+        for element in elements:
+            if element.get("group") == "edges" or ("data" in element and "source" in element["data"]):
+                data = element["data"]
+                
+                # Check if it's a KER edge
+                if data.get("type") == EdgeType.KER.value and data.get("ker_label"):
+                    source_uri = data.get("source", "")
+                    target_uri = data.get("target", "")
+                    ker_label = data.get("ker_label", "")
+                    curie = data.get("curie", "")
+                    
+                    # Extract KER ID from curie or ker_label
+                    ker_id = ker_label
+                    if curie and ":" in curie:
+                        ker_id = curie.split(":")[-1]
+                    
+                    # Create KER URI from curie or generate one
+                    ker_uri = f"https://identifiers.org/aop.relationships/{ker_id}"
+                    
+                    # Only create relationship if both KEs exist
+                    if source_uri in self.key_events and target_uri in self.key_events:
+                        relationship = KeyEventRelationship(
+                            ker_id=ker_id,
+                            ker_uri=ker_uri,
+                            upstream_ke=self.key_events[source_uri],
+                            downstream_ke=self.key_events[target_uri]
+                        )
+                        self.relationships.append(relationship)
 
     def add_key_event(self, key_event: AOPKeyEvent):
         """Add a key event to the network"""

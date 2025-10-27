@@ -25,6 +25,12 @@ class BaseAssociation(ABC):
         """Convert to Cytoscape elements (nodes and edges)"""
         pass
 
+    @classmethod
+    @abstractmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["BaseAssociation"]:
+        """Parse Cytoscape elements back into association objects"""
+        pass
+
     def get_nodes(self) -> list[CytoscapeNode]:
         """Extract nodes from cytoscape elements"""
         elements = self.to_cytoscape_elements()
@@ -61,6 +67,32 @@ class BaseAssociation(ABC):
                     edges.append(edge)
         return edges
 
+    @staticmethod
+    def _collect_nodes_by_type(elements: list[dict[str, Any]], node_types: list[str]) -> dict[str, dict[str, Any]]:
+        """Collect nodes of specific types from elements"""
+        nodes = {}
+        for element in elements:
+            if element.get("group") != "edges" and "data" in element:
+                data = element["data"]
+                if data.get("type") in node_types:
+                    nodes[data.get("id")] = data
+        return nodes
+
+    @staticmethod
+    def _collect_edges_by_type(elements: list[dict[str, Any]], edge_types: list[str]) -> list[dict[str, Any]]:
+        """Collect edges of specific types from elements"""
+        edges = []
+        for element in elements:
+            if element.get("group") == "edges" or ("data" in element and "source" in element["data"]):
+                data = element["data"]
+                if data.get("type") in edge_types:
+                    edges.append(data)
+        return edges
+
+    @staticmethod
+    def _is_ke_uri(uri: str) -> bool:
+        """Check if URI is a Key Event URI"""
+        return uri.startswith("https://identifiers.org/aop.events/")
 
 @dataclass
 class GeneAssociation(BaseAssociation):
@@ -149,6 +181,57 @@ class GeneAssociation(BaseAssociation):
 
         return elements
 
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["GeneAssociation"]:
+        """Parse Cytoscape elements back into GeneAssociation objects"""
+        associations = []
+        
+        # Collect relevant nodes
+        gene_nodes = cls._collect_nodes_by_type(elements, [NodeType.GENE.value])
+        protein_nodes = cls._collect_nodes_by_type(elements, [NodeType.PROTEIN.value])
+        
+        # Collect part_of edges
+        part_of_edges = cls._collect_edges_by_type(elements, [EdgeType.PART_OF.value])
+        translates_to_edges = cls._collect_edges_by_type(elements, [EdgeType.TRANSLATES_TO.value])
+        
+        # Build gene->protein mapping
+        gene_to_protein = {}
+        for edge in translates_to_edges:
+            source_id = edge.get("source", "")
+            target_id = edge.get("target", "")
+            if source_id in gene_nodes and target_id in protein_nodes:
+                gene_id = gene_nodes[source_id].get("gene_id", gene_nodes[source_id].get("label", ""))
+                protein_id = protein_nodes[target_id].get("protein_id", protein_nodes[target_id].get("label", ""))
+                gene_to_protein[gene_id] = protein_id
+        
+        # Process part_of edges
+        for edge in part_of_edges:
+            source_id = edge.get("source", "")
+            target_uri = edge.get("target", "")
+            
+            if cls._is_ke_uri(target_uri):
+                # Direct gene -> KE
+                if source_id in gene_nodes:
+                    gene_id = gene_nodes[source_id].get("gene_id", gene_nodes[source_id].get("label", ""))
+                    associations.append(cls(
+                        ke_uri=target_uri,
+                        gene_id=gene_id,
+                        protein_id=None
+                    ))
+                
+                # Protein -> KE (find corresponding gene)
+                elif source_id in protein_nodes:
+                    protein_id = protein_nodes[source_id].get("protein_id", protein_nodes[source_id].get("label", ""))
+                    # Find gene that translates to this protein
+                    gene_id = next((g for g, p in gene_to_protein.items() if p == protein_id), None)
+                    if gene_id:
+                        associations.append(cls(
+                            ke_uri=target_uri,
+                            gene_id=gene_id,
+                            protein_id=protein_id
+                        ))
+        
+        return associations
 
 @dataclass
 class ComponentAssociation(BaseAssociation):
@@ -302,6 +385,50 @@ class ComponentAssociation(BaseAssociation):
             "node_id": f"process_{process_id}",
         }
 
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["ComponentAssociation"]:
+        """Parse Cytoscape elements back into ComponentAssociation objects"""
+        associations = []
+        
+        # Collect relevant nodes
+        process_nodes = cls._collect_nodes_by_type(elements, [NodeType.COMPONENT_PROCESS.value])
+        object_node_types = [NodeType.COMPONENT_OBJECT.value, NodeType.ORGAN.value, 
+                           NodeType.CELL.value, NodeType.PROTEIN.value, NodeType.CELLULAR_COMPONENT.value]
+        object_nodes = cls._collect_nodes_by_type(elements, object_node_types)
+        
+        # Collect relevant edges
+        has_process_edges = cls._collect_edges_by_type(elements, [EdgeType.HAS_PROCESS.value])
+        involves_edges = cls._collect_edges_by_type(elements, [EdgeType.INVOLVES.value])
+        
+        # Build KE -> object mapping
+        ke_to_object = {}
+        for edge in involves_edges:
+            source_uri = edge.get("source", "")
+            target_id = edge.get("target", "")
+            if cls._is_ke_uri(source_uri) and target_id in object_nodes:
+                ke_to_object[source_uri] = object_nodes[target_id]
+        
+        # Process has_process edges
+        for edge in has_process_edges:
+            source_uri = edge.get("source", "")
+            target_id = edge.get("target", "")
+            
+            if cls._is_ke_uri(source_uri) and target_id in process_nodes:
+                process_data = process_nodes[target_id]
+                object_data = ke_to_object.get(source_uri, {})
+                
+                associations.append(cls(
+                    ke_uri=source_uri,
+                    ke_name="",
+                    process=process_data.get("process_iri", ""),
+                    process_name=process_data.get("process_name", process_data.get("label", "")),
+                    object=object_data.get("object_iri", ""),
+                    object_name=object_data.get("object_name", object_data.get("label", "")),
+                    action=edge.get("label", ""),
+                    object_type=object_data.get("type", ""),
+                ))
+        
+        return associations
 
 @dataclass
 class CompoundAssociation(BaseAssociation):
@@ -332,7 +459,7 @@ class CompoundAssociation(BaseAssociation):
         )
         chemical_node_id = f"chemical_{pubchem_id}"
 
-        # Chemical node
+        # Chemical node - include aop_uri and chemical_uri for round-trip parsing
         elements.append(
             {
                 "data": {
@@ -344,6 +471,8 @@ class CompoundAssociation(BaseAssociation):
                     "chemical_label": self.chemical_label,
                     "compound_name": self.compound_name,
                     "pubchem_compound": self.pubchem_compound,
+                    "aop_uri": self.aop_uri,  # Add for round-trip parsing
+                    "chemical_uri": self.chemical_uri,  # Add for round-trip parsing
                 },
                 "classes": "chemical-node",
             }
@@ -389,6 +518,40 @@ class CompoundAssociation(BaseAssociation):
             "chemical_uri": self.chemical_uri,
         }
 
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["CompoundAssociation"]:
+        """Parse Cytoscape elements back into CompoundAssociation objects"""
+        associations = []
+
+        # Collect chemical nodes and stressor edges
+        chemical_nodes = cls._collect_nodes_by_type(elements, [NodeType.CHEMICAL.value])
+        stressor_edges = cls._collect_edges_by_type(elements, [EdgeType.IS_STRESSOR_OF.value])
+
+        # Process stressor relationships
+        for edge in stressor_edges:
+            source_id = edge.get("source", "")
+            target_uri = edge.get("target", "")
+
+            if source_id in chemical_nodes and cls._is_ke_uri(target_uri):
+                chem_data = chemical_nodes[source_id]
+                
+                # Get the required URIs from the chemical node data
+                aop_uri = chem_data.get("aop_uri", "")
+                chemical_uri = chem_data.get("chemical_uri", "")
+                
+                # Only create association if we have the required aop_uri
+                if aop_uri:  # Only create if we have AOP URI
+                    associations.append(cls(
+                        aop_uri=aop_uri,
+                        mie_uri=target_uri,
+                        chemical_uri=chemical_uri,
+                        chemical_label=chem_data.get("chemical_label", chem_data.get("label", "")),
+                        pubchem_compound=chem_data.get("pubchem_compound", ""),
+                        compound_name=chem_data.get("compound_name", chem_data.get("label", "")),
+                        cas_id=chem_data.get("cas_id"),
+                    ))
+
+        return associations
 
 @dataclass
 class GeneExpressionAssociation(BaseAssociation):
@@ -458,6 +621,35 @@ class GeneExpressionAssociation(BaseAssociation):
             "developmental_stage": self.developmental_stage_name,
         }
 
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["GeneExpressionAssociation"]:
+        """Parse Cytoscape elements back into GeneExpressionAssociation objects"""
+        associations = []
+        
+        # Collect nodes and edges
+        gene_nodes = cls._collect_nodes_by_type(elements, [NodeType.GENE.value])
+        organ_nodes = cls._collect_nodes_by_type(elements, [NodeType.ORGAN.value])
+        expression_edges = cls._collect_edges_by_type(elements, [EdgeType.EXPRESSION_IN.value])
+        
+        # Process expression relationships
+        for edge in expression_edges:
+            source_id = edge.get("source", "")
+            target_id = edge.get("target", "")
+            
+            if source_id in gene_nodes and target_id in organ_nodes:
+                gene_data = gene_nodes[source_id]
+                organ_data = organ_nodes[target_id]
+                
+                associations.append(cls(
+                    gene_id=gene_data.get("gene_id", gene_data.get("label", "")),
+                    anatomical_id=organ_data.get("anatomical_id", organ_data.get("id", "")),
+                    anatomical_name=organ_data.get("anatomical_name", organ_data.get("label", "")),
+                    expression_level=edge.get("expression_level", ""),
+                    confidence_level_name=edge.get("confidence_level", ""),
+                    developmental_stage_name=edge.get("developmental_stage", ""),
+                ))
+        
+        return associations
 
 @dataclass
 class OrganAssociation(BaseAssociation):
@@ -478,3 +670,48 @@ class OrganAssociation(BaseAssociation):
             {"data": self.organ_data.to_dict()},
             {"data": self.edge_data.to_dict()}
         ]
+
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> list["OrganAssociation"]:
+        """Parse Cytoscape elements back into OrganAssociation objects"""
+        associations = []
+        
+        # Collect nodes and edges
+        organ_nodes = cls._collect_nodes_by_type(elements, [NodeType.ORGAN.value])
+        associated_edges = cls._collect_edges_by_type(elements, [EdgeType.ASSOCIATED_WITH.value])
+        
+        # Process organ-KE associations
+        for edge in associated_edges:
+            source_uri = edge.get("source", "")
+            target_id = edge.get("target", "")
+            
+            if cls._is_ke_uri(source_uri) and target_id in organ_nodes:
+                organ_data = organ_nodes[target_id]
+                
+                # Find original element for classes
+                organ_element = next((e for e in elements 
+                                    if e.get("data", {}).get("id") == target_id), {})
+                
+                organ_node = CytoscapeNode(
+                    id=organ_data.get("id", ""),
+                    label=organ_data.get("label", ""),
+                    node_type=organ_data.get("type", ""),
+                    classes=organ_element.get("classes", ""),
+                    properties=organ_data
+                )
+                
+                edge_obj = CytoscapeEdge(
+                    id=edge.get("id", ""),
+                    source=edge.get("source", ""),
+                    target=edge.get("target", ""),
+                    label=edge.get("label", ""),
+                    properties=edge
+                )
+                
+                associations.append(cls(
+                    ke_uri=source_uri,
+                    organ_data=organ_node,
+                    edge_data=edge_obj
+                ))
+        
+        return associations

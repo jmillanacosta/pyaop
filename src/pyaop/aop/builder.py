@@ -657,32 +657,21 @@ class AOPNetworkBuilder:
         for assoc in associations:
             self.network.add_component_association(assoc)
 
-    def update_from_json(self, cytoscape_json: dict[str, Any]) -> None:
+    def update_from_json(self, cytoscape_json: dict[str, Any]) -> AOPNetwork:
         """
         Update self.network from a cytoscape JSON coming from request data.
         
         Args:
             cytoscape_json: The Cytoscape JSON data containing elements
         """
-        try:
-            # Extract elements from the JSON
-            elements = cytoscape_json.get("elements", [])
-            if not elements:
-                logger.warning("No elements found in cytoscape JSON")
-                return
-
-            # Update the network using the from_cytoscape_elements method
-            self.network = AOPNetwork.from_cytoscape_elements(elements)
-            
-            logger.info(
-                f"Updated network from JSON: "
-                f"{len(self.network.node_list)} nodes, "
-                f"{len(self.network.edge_list)} edges"
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to update network from JSON: {e}")
-            raise ValueError(f"Invalid cytoscape JSON format: {e}")
+        # Extract elements from the JSON
+        elements = cytoscape_json.get("elements", [])
+        if not elements:
+            logger.warning("No elements found in cytoscape JSON")
+            return self.network
+        # Update the network using the from_cytoscape_elements method
+        self.network.from_cytoscape_elements(elements)
+        return self.network
 
     def _build_network(self) -> AOPNetwork:
         """Build and return the current network state"""
