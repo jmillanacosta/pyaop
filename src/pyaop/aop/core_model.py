@@ -509,3 +509,33 @@ class AOPNetwork:
         if self.style_manager:
             return self.style_manager.get_layout_config()
         return {"name": "breadthfirst"}
+
+    def aop_table(self) -> list[dict[str, str]]:
+        """Generate AOP table showing Key Event relationships and AOP associations"""
+        from pyaop.exports.data_tables.aop import AOPTableBuilder
+        builder = AOPTableBuilder(self)
+        return builder.build_aop_table()
+
+    def component_table(self) -> list[dict[str, Any]]:
+        """Generate component table showing Key Event components and biological processes"""
+        from pyaop.exports.data_tables.component import ComponentTableBuilder
+        builder = ComponentTableBuilder(self)
+        return builder.build_component_table()
+
+    def gene_table(self) -> list[dict[str, str]]:
+        """Generate gene table showing gene-protein associations with expression data"""
+        from pyaop.exports.data_tables.gene import GeneTableBuilder
+        builder = GeneTableBuilder(self)
+        return builder.build_gene_table()
+
+    def gene_expression_table(self) -> list[dict[str, str]]:
+        """Generate gene expression table with detailed expression information"""
+        from pyaop.exports.data_tables.gene import GeneExpressionTableBuilder
+        builder = GeneExpressionTableBuilder(self)
+        return builder.build_gene_expression_table()
+
+    def compound_table(self) -> list[dict[str, str]]:
+        """Generate compound table showing chemical stressor information"""
+        from pyaop.exports.data_tables.compound import CompoundTableBuilder
+        builder = CompoundTableBuilder(self)
+        return builder.build_compound_table()

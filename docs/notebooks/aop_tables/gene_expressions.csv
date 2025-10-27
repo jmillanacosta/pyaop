@@ -1,1 +1,20 @@
-
+gene_id,gene_label,organ,organ_id,expression_level,confidence,developmental_stage,expr_id
+ENSG00000048052,ENSG00000048052,testis,http://purl.obolibrary.org/obo/UBERON_0000473,89.578460000000006858,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_103607213
+ENSG00000049130,ENSG00000049130,testis,http://purl.obolibrary.org/obo/UBERON_0000473,55.153919999999999391,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_154523557
+ENSG00000094631,ENSG00000094631,testis,http://purl.obolibrary.org/obo/UBERON_0000473,97.346350000000001046,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_40168603
+ENSG00000109320,ENSG00000109320,testis,http://purl.obolibrary.org/obo/UBERON_0000473,83.498869999999996594,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_162691126
+ENSG00000110427,ENSG00000110427,testis,http://purl.obolibrary.org/obo/UBERON_0000473,51.020060000000000855,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_167787429
+ENSG00000116478,ENSG00000116478,testis,http://purl.obolibrary.org/obo/UBERON_0000473,94.644689999999997099,high confidence level,third decade stage (human),http://bgee.org/#EXPRESSION_35376778
+ENSG00000118971,ENSG00000118971,testis,http://purl.obolibrary.org/obo/UBERON_0000473,73.78740999999999417,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_26089081
+ENSG00000124762,ENSG00000124762,testis,http://purl.obolibrary.org/obo/UBERON_0000473,96.325220000000001619,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_147593673
+ENSG00000141510,ENSG00000141510,testis,http://purl.obolibrary.org/obo/UBERON_0000473,76.709209999999998786,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_47923384
+ENSG00000147099,ENSG00000147099,testis,http://purl.obolibrary.org/obo/UBERON_0000473,67.42464999999999975,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_219681793
+ENSG00000163517,ENSG00000163517,testis,http://purl.obolibrary.org/obo/UBERON_0000473,96.925880000000006476,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_81921250
+ENSG00000167815,ENSG00000167815,testis,http://purl.obolibrary.org/obo/UBERON_0000473,92.526009999999999422,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_137532066
+ENSG00000171791,ENSG00000171791,testis,http://purl.obolibrary.org/obo/UBERON_0000473,55.561509999999998399,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_119460163
+ENSG00000172465,ENSG00000172465,testis,http://purl.obolibrary.org/obo/UBERON_0000473,83.880729999999999791,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_141815326
+ENSG00000184260,ENSG00000184260,testis,http://purl.obolibrary.org/obo/UBERON_0000473,57.764670000000002403,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_75740447
+ENSG00000184678,ENSG00000184678,testis,http://purl.obolibrary.org/obo/UBERON_0000473,69.827309999999997103,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_35118779
+ENSG00000204469,ENSG00000204469,testis,http://purl.obolibrary.org/obo/UBERON_0000473,98.792230000000003542,high confidence level,80 year-old and over stage (human),http://bgee.org/#EXPRESSION_74463048
+ENSG00000211918,ENSG00000211918,testis,http://purl.obolibrary.org/obo/UBERON_0000473,6.093449999999999811,high confidence level,sixth decade stage (human),http://bgee.org/#EXPRESSION_217384669
+ENSG00000229150,ENSG00000229150,testis,http://purl.obolibrary.org/obo/UBERON_0000473,47.785049999999998249,high confidence level,nursing stage,http://bgee.org/#EXPRESSION_95580622
