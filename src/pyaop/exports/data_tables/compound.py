@@ -6,8 +6,8 @@ Parse the Cytoscape data model into AOP compound (stressor) tables.
 
 import logging
 
-from pyaop.cytoscape.elements import CytoscapeNode
 from pyaop.cytoscape.parser import CytoscapeNetworkParser
+from pyaop.cytoscape.elements import CytoscapeNode
 
 logger = logging.getLogger(__name__)
 

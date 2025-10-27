@@ -8,8 +8,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from pyaop.aop.converters.cy_to_aop import CytoscapeNetworkParser
-from pyaop.aop.cytoscape.elements import CytoscapeEdge, CytoscapeNode
+from pyaop.cytoscape.parser import CytoscapeNetworkParser
+from pyaop.cytoscape.elements import CytoscapeEdge, CytoscapeNode
 
 logger = logging.getLogger(__name__)
 
