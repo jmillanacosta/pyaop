@@ -33,10 +33,7 @@ class AOPQueryService(BaseQueryService):
         # Process values to ensure proper URI formatting
         processed_values = []
         for value in values.split():
-            if value.startswith("http"):
-                processed_values.append(f"<{value}>")
-            else:
-                processed_values.append(f"<{value}>")
+            processed_values.append(f"<{value}>")
 
         formatted_values = " ".join(processed_values)
 

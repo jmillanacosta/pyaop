@@ -321,6 +321,7 @@ class AOPNetworkBuilder:
         self._aop_processor = AOPSPARQLProcessor()
         self._assoc_processor = AssociationProcessor()
         self._bgee_query_service = BgeeQueryService()
+
     def query_by_identifier(
         self, query_type: str, values: str
     ) -> tuple[AOPNetwork, str]:
@@ -344,6 +345,120 @@ class AOPNetworkBuilder:
         except Exception as e:
             logger.error(f"Failed to query AOP network: {e}")
             raise ValueError(str(e))
+
+    def query_organs_for_kes(self) -> tuple[AOPNetwork, str]:
+        """Query organ associations for all KEs in the network"""
+        try:
+            ke_uris = self.network.get_ke_uris()
+            if not ke_uris:
+                logger.warning("No Key Events found for organ querying")
+                return self.network, "# No KEs to query"
+
+            query_result = self._execute_organ_query(ke_uris)
+            if not query_result.success:
+                logger.error(f"Organ query failed: {query_result.error}")
+                return self.network, "# Organ query failed"
+
+            self._process_organ_query_results(query_result.data)
+            self.network = self._build_network()
+            return self.network, query_result.query
+
+        except Exception as e:
+            logger.error(f"Failed to query organs for network: {e}")
+            return self.network, "# Organ query failed"
+
+    def query_compounds_for_network(self) -> tuple[AOPNetwork, str]:
+        """Query compound associations for all AOPs in the network"""
+        try:
+            aop_uris = self.network.get_aop_uris()
+            if not aop_uris:
+                logger.warning("No AOPs found for compound querying")
+                return self.network, "# No AOPs to query"
+
+            query_result = self._execute_compound_query(aop_uris)
+            if not query_result.success:
+                logger.error(f"Compound query failed: {query_result.error}")
+                return self.network, "# Compound query failed"
+
+            self._process_compound_query_results(query_result.data)
+            self.network = self._build_network()
+            return self.network, query_result.query
+
+        except Exception as e:
+            logger.error(f"Failed to query compounds for network: {e}")
+            return self.network, "# Compound query failed"
+
+    def query_components_for_network(
+        self, go_only: bool = False
+    ) -> tuple[AOPNetwork, str]:
+        """Query components for all KEs in the network"""
+        try:
+            ke_uris = self.network.get_ke_uris()
+            if not ke_uris:
+                logger.warning("No Key Events found for component querying")
+                return self.network, "# No KEs to query"
+
+            query_result = self._execute_component_query(ke_uris, go_only)
+            if not query_result.success:
+                logger.error(f"Component query failed: {query_result.error}")
+                return self.network, "# Component query failed"
+
+            self._process_component_query_results(query_result.data)
+            self.network = self._build_network()
+            return self.network, query_result.query
+
+        except Exception as e:
+            logger.error(f"Failed to query components for network: {e}")
+            return self.network, "# Component query failed"
+
+    def query_gene_expression(
+        self,
+        confidence_level: int,
+        source: str = "bgee",
+    ) -> tuple[AOPNetwork, str]:
+        """Query gene expression values for all KEs in the network"""
+        try:
+            gene_ids = self.network.get_gene_ids()
+            organ_ids = self.network.get_organ_ids()
+            if not [gene_ids, organ_ids]:
+                return self.network, "# No genes and organs to query"
+
+            # Execute gene expression query
+            updated_network, query = self._execute_gene_expression_query(
+                confidence_level=confidence_level, source=source
+            )
+            self.network = updated_network
+            return self.network, query
+
+        except Exception as e:
+            logger.error(f"Failed to query genes for network: {e}")
+            return self.network, "# Gene query failed"
+
+    def query_genes_for_ke(
+        self, include_proteins: bool = True
+    ) -> tuple[AOPNetwork, str]:
+        """Query gene associations for all KEs in the network"""
+        try:
+            ke_uris = self.network.get_ke_uris()
+            if not ke_uris:
+                logger.warning("No Key Events found for gene querying")
+                return self.network, "# No KEs to query"
+
+            # Execute gene query
+            query_result = self._execute_gene_query(ke_uris, include_proteins)
+            if not query_result.success:
+                logger.error(f"Gene query failed: {query_result.error}")
+                return self.network, "# Gene query failed"
+
+            # Process results
+            self._process_gene_query_results(query_result.data, include_proteins)
+
+            self.network = self._build_network()
+            return self.network, query_result.query
+
+        except Exception as e:
+            logger.error(f"Failed to query genes for network: {e}")
+            return self.network, "# Gene query failed"
 
     def _execute_aop_query(self, query_type: str, values: str) -> QueryResult:
         """Execute AOP SPARQL query and return structured result"""
@@ -418,71 +533,6 @@ class AOPNetworkBuilder:
         for assoc in associations:
             self.network.add_gene_association(assoc)
 
-    def query_compounds_for_network(self) -> tuple[AOPNetwork, str]:
-        """Query compound associations for all AOPs in the network"""
-        try:
-            aop_uris = self.network.get_aop_uris()
-            if not aop_uris:
-                logger.warning("No AOPs found for compound querying")
-                return self.network, "# No AOPs to query"
-
-            query_result = self._execute_compound_query(aop_uris)
-            if not query_result.success:
-                logger.error(f"Compound query failed: {query_result.error}")
-                return self.network, "# Compound query failed"
-
-            self._process_compound_query_results(query_result.data)
-            self.network = self._build_network()
-            return self.network, query_result.query
-
-        except Exception as e:
-            logger.error(f"Failed to query compounds for network: {e}")
-            return self.network, "# Compound query failed"
-
-    def query_organs_for_kes(self) -> tuple[AOPNetwork, str]:
-        """Query organ associations for all KEs in the network"""
-        try:
-            ke_uris = self.network.get_ke_uris()
-            if not ke_uris:
-                logger.warning("No Key Events found for organ querying")
-                return self.network, "# No KEs to query"
-
-            query_result = self._execute_organ_query(ke_uris)
-            if not query_result.success:
-                logger.error(f"Organ query failed: {query_result.error}")
-                return self.network, "# Organ query failed"
-
-            self._process_organ_query_results(query_result.data)
-            self.network = self._build_network()
-            return self.network, query_result.query
-
-        except Exception as e:
-            logger.error(f"Failed to query organs for network: {e}")
-            return self.network, "# Organ query failed"
-
-    def query_components_for_network(
-        self, go_only: bool = False
-    ) -> tuple[AOPNetwork, str]:
-        """Query components for all KEs in the network"""
-        try:
-            ke_uris = self.network.get_ke_uris()
-            if not ke_uris:
-                logger.warning("No Key Events found for component querying")
-                return self.network, "# No KEs to query"
-
-            query_result = self._execute_component_query(ke_uris, go_only)
-            if not query_result.success:
-                logger.error(f"Component query failed: {query_result.error}")
-                return self.network, "# Component query failed"
-
-            self._process_component_query_results(query_result.data)
-            self.network = self._build_network()
-            return self.network, query_result.query
-
-        except Exception as e:
-            logger.error(f"Failed to query components for network: {e}")
-            return self.network, "# Component query failed"
-
     def _execute_compound_query(self, aop_uris: list[str]) -> QueryResult:
         """Execute compound association query"""
         try:
@@ -497,58 +547,6 @@ class AOPNetworkBuilder:
                 data={}, query="", success=False, error=str(e)
             )
 
-    def query_gene_expression(
-            self,
-            confidence_level: int,
-            source: str = "bgee",
-            ) -> tuple[AOPNetwork, str]:
-        """Query gene expression values for all KEs in the network"""
-        try:
-            gene_ids = self.network.get_gene_ids()
-            organ_ids = self.network.get_organ_ids()
-            if not [gene_ids, organ_ids]:
-                return self.network, "# No genes and organs to query"
-
-            # Execute gene expression query
-            updated_network, query = self._execute_gene_expression_query(
-                confidence_level=confidence_level,
-                source=source
-            )
-            self.network = updated_network
-            return self.network, query
-
-        except Exception as e:
-            logger.error(f"Failed to query genes for network: {e}")
-            return self.network, "# Gene query failed"
-
-    def query_genes_for_ke(
-        self, include_proteins: bool = True
-    ) -> tuple[AOPNetwork, str]:
-        """Query gene associations for all KEs in the network"""
-        try:
-            ke_uris = self.network.get_ke_uris()
-            if not ke_uris:
-                logger.warning("No Key Events found for gene querying")
-                return self.network, "# No KEs to query"
-
-            # Execute gene query
-            query_result = self._execute_gene_query(ke_uris, include_proteins)
-            if not query_result.success:
-                logger.error(f"Gene query failed: {query_result.error}")
-                return self.network, "# Gene query failed"
-
-            # Process results
-            self._process_gene_query_results(
-                query_result.data, include_proteins
-            )
-
-            self.network = self._build_network()
-            return self.network, query_result.query
-
-        except Exception as e:
-            logger.error(f"Failed to query genes for network: {e}")
-            return self.network, "# Gene query failed"
-
     def _execute_gene_expression_query(
         self,
         confidence_level: int = 50,
@@ -559,17 +557,17 @@ class AOPNetworkBuilder:
             # Get gene and organ IDs from current network
             gene_ids = self.network.get_gene_ids()
             organ_ids = self.network.get_organ_ids()
-            
+
             # Format for SPARQL query
             formatted_gene_ids = [f'"{eid}"' for eid in gene_ids if eid]
             formatted_organ_ids = [f'"{oid}"' for oid in organ_ids if oid]
-            
+
             # Build and execute query
             query = self._bgee_query_service.build_gene_expressions_query(
                 formatted_gene_ids, formatted_organ_ids, confidence_level
             )
             results = self._bgee_query_service.execute_sparql_query(query)
-            
+
             # Process results into associations
             gene_expression_results = results.get("results", {}).get("bindings", [])
             for result in gene_expression_results:
@@ -593,7 +591,7 @@ class AOPNetworkBuilder:
                 except Exception as e:
                     logger.warning(f"Failed to process gene expression result: {e}")
                     continue
-            
+
             return self.network, query
         except Exception as e:
             logger.error(f"Failed to execute gene expression query: {e}")
@@ -658,6 +656,33 @@ class AOPNetworkBuilder:
 
         for assoc in associations:
             self.network.add_component_association(assoc)
+
+    def update_from_json(self, cytoscape_json: dict[str, Any]) -> None:
+        """
+        Update self.network from a cytoscape JSON coming from request data.
+        
+        Args:
+            cytoscape_json: The Cytoscape JSON data containing elements
+        """
+        try:
+            # Extract elements from the JSON
+            elements = cytoscape_json.get("elements", [])
+            if not elements:
+                logger.warning("No elements found in cytoscape JSON")
+                return
+
+            # Update the network using the from_cytoscape_elements method
+            self.network = AOPNetwork.from_cytoscape_elements(elements)
+            
+            logger.info(
+                f"Updated network from JSON: "
+                f"{len(self.network.node_list)} nodes, "
+                f"{len(self.network.edge_list)} edges"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to update network from JSON: {e}")
+            raise ValueError(f"Invalid cytoscape JSON format: {e}")
 
     def _build_network(self) -> AOPNetwork:
         """Build and return the current network state"""
