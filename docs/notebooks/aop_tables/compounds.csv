@@ -1,0 +1,9 @@
+compound_name,chemical_label,pubchem_id,pubchem_compound,cas_id,chemical_uri,smiles,node_id
+Apicidin,Apicidin,467801,https://identifiers.org/pubchem.compound/467801,467801,https://identifiers.org/cas/183506-66-3,,chemical_467801
+Apicidin,Apicidin,6918328,https://identifiers.org/pubchem.compound/6918328,6918328,https://identifiers.org/cas/183506-66-3,,chemical_6918328
+Butyrate,Butyrate,104775,https://identifiers.org/pubchem.compound/104775,104775,https://identifiers.org/cas/461-55-2,,chemical_104775
+MS-275,MS-275,4261,https://identifiers.org/pubchem.compound/4261,4261,https://identifiers.org/cas/209783-80-2,,chemical_4261
+Methoxyacetic acid,Methoxyacetic acid,12251,https://identifiers.org/pubchem.compound/12251,12251,https://identifiers.org/cas/625-45-6,,chemical_12251
+Suberoylanilide hydroxamic acid,Suberoylanilide hydroxamic acid,5311,https://identifiers.org/pubchem.compound/5311,5311,https://identifiers.org/cas/149647-78-9,,chemical_5311
+Trichostatin A,Trichostatin A,444732,https://identifiers.org/pubchem.compound/444732,444732,https://identifiers.org/cas/58880-19-6,,chemical_444732
+Valproic acid,Valproic acid,3121,https://identifiers.org/pubchem.compound/3121,3121,https://identifiers.org/cas/99-66-1,,chemical_3121

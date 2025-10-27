@@ -200,25 +200,19 @@ class AOPNetwork:
 
     def _parse_associations_from_elements(self, elements: list[dict[str, Any]]) -> None:
         """Parse all association types from Cytoscape elements"""
-        # Parse gene associations
-        gene_associations = GeneAssociation.from_cytoscape_elements(elements)
-        self.gene_associations.extend(gene_associations)
-
-        # Parse component associations  
-        component_associations = ComponentAssociation.from_cytoscape_elements(elements)
-        self.component_associations.extend(component_associations)
-
-        # Parse compound associations
-        compound_associations = CompoundAssociation.from_cytoscape_elements(elements)
-        self.compound_associations.extend(compound_associations)
-
-        # Parse gene expression associations
-        gene_expression_associations = GeneExpressionAssociation.from_cytoscape_elements(elements)
-        self.gene_expression_associations.extend(gene_expression_associations)
-
-        # Parse organ associations
-        organ_associations = OrganAssociation.from_cytoscape_elements(elements)
-        self.organ_associations.extend(organ_associations)
+        # Define association types and their corresponding lists
+        association_types = [
+            (GeneAssociation, self.gene_associations),
+            (ComponentAssociation, self.component_associations),
+            (CompoundAssociation, self.compound_associations),
+            (GeneExpressionAssociation, self.gene_expression_associations),
+            (OrganAssociation, self.organ_associations),
+        ]
+        
+        # Parse each association type
+        for assoc_class, assoc_list in association_types:
+            parsed_associations = assoc_class.from_cytoscape_elements(elements)
+            assoc_list.extend(parsed_associations)
 
     def _parse_aop_info_from_elements(self, elements: list[dict[str, Any]]) -> None:
         """Parse AOP information from Cytoscape elements using AOPInfo parser"""
@@ -500,6 +494,7 @@ class AOPNetwork:
             "gene_expression_associations": len(self.gene_expression_associations),
             "compound_associations": len(self.compound_associations),
             "component_associations": len(self.component_associations),
+            "organ_associations": len(self.organ_associations),
             "total_aops": len(self.aop_info),
         }
 
