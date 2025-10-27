@@ -343,8 +343,8 @@ class AOPNetworkBuilder:
             return self.network, query_result.query
 
         except Exception as e:
-            logger.error(f"Failed to query AOP network: {e}")
-            raise ValueError(str(e))
+            logger.error("Failed to query AOP network: %s", e)
+            raise ValueError(str(e)) from e
 
     def query_organs_for_kes(self) -> tuple[AOPNetwork, str]:
         """Query organ associations for all KEs in the network"""
@@ -356,7 +356,7 @@ class AOPNetworkBuilder:
 
             query_result = self._execute_organ_query(ke_uris)
             if not query_result.success:
-                logger.error(f"Organ query failed: {query_result.error}")
+                logger.error("Organ query failed: %s", query_result.error)
                 return self.network, "# Organ query failed"
 
             self._process_organ_query_results(query_result.data)
@@ -364,7 +364,7 @@ class AOPNetworkBuilder:
             return self.network, query_result.query
 
         except Exception as e:
-            logger.error(f"Failed to query organs for network: {e}")
+            logger.error("Failed to query organs for network: %s", e)
             return self.network, "# Organ query failed"
 
     def query_compounds_for_network(self) -> tuple[AOPNetwork, str]:
@@ -377,7 +377,7 @@ class AOPNetworkBuilder:
 
             query_result = self._execute_compound_query(aop_uris)
             if not query_result.success:
-                logger.error(f"Compound query failed: {query_result.error}")
+                logger.error("Compound query failed: %s", query_result.error)
                 return self.network, "# Compound query failed"
 
             self._process_compound_query_results(query_result.data)
@@ -385,7 +385,7 @@ class AOPNetworkBuilder:
             return self.network, query_result.query
 
         except Exception as e:
-            logger.error(f"Failed to query compounds for network: {e}")
+            logger.error("Failed to query compounds for network: %s", e)
             return self.network, "# Compound query failed"
 
     def query_components_for_network(
@@ -400,7 +400,7 @@ class AOPNetworkBuilder:
 
             query_result = self._execute_component_query(ke_uris, go_only)
             if not query_result.success:
-                logger.error(f"Component query failed: {query_result.error}")
+                logger.error("Component query failed: %s", query_result.error)
                 return self.network, "# Component query failed"
 
             self._process_component_query_results(query_result.data)
@@ -408,7 +408,7 @@ class AOPNetworkBuilder:
             return self.network, query_result.query
 
         except Exception as e:
-            logger.error(f"Failed to query components for network: {e}")
+            logger.error("Failed to query components for network: %s", e)
             return self.network, "# Component query failed"
 
     def query_gene_expression(
@@ -431,7 +431,7 @@ class AOPNetworkBuilder:
             return self.network, query
 
         except Exception as e:
-            logger.error(f"Failed to query genes for network: {e}")
+            logger.error("Failed to query genes for network: %s", e)
             return self.network, "# Gene query failed"
 
     def query_genes_for_ke(
@@ -447,7 +447,7 @@ class AOPNetworkBuilder:
             # Execute gene query
             query_result = self._execute_gene_query(ke_uris, include_proteins)
             if not query_result.success:
-                logger.error(f"Gene query failed: {query_result.error}")
+                logger.error("Gene query failed: %s", query_result.error)
                 return self.network, "# Gene query failed"
 
             # Process results
@@ -476,7 +476,7 @@ class AOPNetworkBuilder:
 
             results = self._aop_query_service.execute_sparql_query(query)
             bindings = results.get('results', {}).get('bindings', [])
-            logger.debug(f"Retrieved {len(bindings)} bindings")
+            logger.debug("Retrieved %d bindings", len(bindings))
 
             return QueryResult(data=results, query=query, success=True)
 
@@ -589,12 +589,12 @@ class AOPNetworkBuilder:
                     )
                     self.network.add_gene_expression_association(association)
                 except Exception as e:
-                    logger.warning(f"Failed to process gene expression result: {e}")
+                    logger.warning("Failed to process gene expression result: %s", e)
                     continue
 
             return self.network, query
         except Exception as e:
-            logger.error(f"Failed to execute gene expression query: {e}")
+            logger.error("Failed to execute gene expression query: %s", e)
             return self.network, "# Gene expression query failed"
 
     def _execute_organ_query(self, ke_uris: list[str]) -> QueryResult:
