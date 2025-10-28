@@ -463,9 +463,9 @@ class AOPNetworkBuilder:
     def _execute_aop_query(self, query_type: str, values: str, status: list) -> QueryResult:
         """Execute AOP SPARQL query and return structured result"""
         try:
-            status = " ".join([f'{i}' for i in status])
+            formatted_status = " ".join([f'\"{i}\"' for i in status])
             query = self._aop_query_service.build_aop_sparql_query(
-                query_type, values, status
+                query_type, values, formatted_status
             )
             if not query:
                 return QueryResult(
