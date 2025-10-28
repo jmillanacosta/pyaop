@@ -72,8 +72,6 @@ class AOPQueryService(BaseQueryService):
                aopo:has_molecular_initiating_event ?MIE .
           ?ao dc:title ?ao_title .
           ?MIE dc:title ?MIEtitle .
-
-          }
         }"""
 
         # Build VALUES clause based on query type
