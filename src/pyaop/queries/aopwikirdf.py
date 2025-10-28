@@ -60,7 +60,6 @@ class AOPQueryService(BaseQueryService):
         ke_query = """SELECT DISTINCT ?aop ?aop_title ?MIEtitle ?MIE ?KE_downstream ?KE_downstream_title ?KER ?ao ?ao_title ?KE_upstream ?KE_upstream_title
         WHERE {
           %VALUES_CLAUSE%
-          OPTIONAL {
             ?aop aopo:has_key_event_relationship ?KER .
             ?KER a aopo:KeyEventRelationship ;
                  aopo:has_upstream_key_event ?KE_upstream ;
