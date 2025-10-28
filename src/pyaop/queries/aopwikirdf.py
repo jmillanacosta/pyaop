@@ -102,7 +102,7 @@ WHERE {
   ?MIE dc:title ?MIEtitle .
 }
             """
-            final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause)
+            final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause).replace("%STATUS_VALUES_CLAUSE%", status_values_clause).replace("%status_query%", status_query)
         else:
             final_query = (
                 base_query.replace("%VALUES_CLAUSE%", values_clause)
