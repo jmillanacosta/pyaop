@@ -130,11 +130,12 @@ WHERE {
   ?aop a aopo:AdverseOutcomePathway ;
        dc:title ?aop_title ;
        aopo:has_adverse_outcome ?ao ;
-    FILTER (?ao = ?KE_downstream_x)
+    
        aopo:has_molecular_initiating_event ?MIE .
   ?ao dc:title ?ao_title .
   ?MIE dc:title ?MIEtitle .
 }
+FILTER (?ao = ?KE_downstream_x)
             """
             final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause)
         else:
