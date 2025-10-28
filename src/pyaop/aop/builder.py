@@ -464,7 +464,7 @@ class AOPNetworkBuilder:
         """Execute AOP SPARQL query and return structured result"""
         try:
             formatted_status = " ".join([f'\"{i}\"' for i in status])
-            if status.sort() == ["WPHA/WNT Endorsed", "Under Review", "Under Development"].sort():
+            if len(status) == 3:
                 formatted_status = ""
             query = self._aop_query_service.build_aop_sparql_query(
                 query_type, values, formatted_status
