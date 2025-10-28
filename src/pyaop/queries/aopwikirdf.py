@@ -70,49 +70,47 @@ class AOPQueryService(BaseQueryService):
             logger.warning(f"Invalid query type: {query_type}")
             return ""
         if query_type == "ke_upstream":
-            ke_query = """SELECT DISTINCT ?aop ?aop_title ?MIEtitle ?MIE ?KE_downstream ?KE_downstream_title ?KER ?ao ?ao_title ?KE_upstream ?KE_upstream_title
-                    WHERE {
-                      %VALUES_CLAUSE%
-                        
-                        ?KERx a aopo:KeyEventRelationship ;
-                             aopo:has_upstream_key_event ?KE_upstream_x ;
-                        ?aop aopo:has_key_event_relationship ?KERx .
-                        ?aop aopo:has_key_event_relationship ?KER .
-                        ?KER
-                             aopo:has_downstream_key_event ?KE_downstream ;
-                             aopo:has_upstream_key_event ?KE_upstream .
-                        ?KE_upstream dc:title ?KE_upstream_title .
-                        ?KE_downstream dc:title ?KE_downstream_title .
-                      ?aop a aopo:AdverseOutcomePathway ;
-                           dc:title ?aop_title ;
-                           aopo:has_adverse_outcome ?ao ;
-                           aopo:has_molecular_initiating_event ?MIE .
-                      ?ao dc:title ?ao_title .
-                      ?MIE dc:title ?MIEtitle .
-                    }
-            """
+            ke_query = """
+SELECT DISTINCT ?aop ?aop_title ?MIEtitle ?MIE ?KE_downstream ?KE_downstream_title ?KER ?ao ?ao_title ?KE_upstream ?KE_upstream_title
+WHERE {
+  %VALUES_CLAUSE%
+  ?KERx a aopo:KeyEventRelationship ;
+        aopo:has_upstream_key_event ?KE_upstream_x .
+  ?aop aopo:has_key_event_relationship ?KERx .
+  ?aop aopo:has_key_event_relationship ?KER .
+  ?KER aopo:has_downstream_key_event ?KE_downstream ;
+        aopo:has_upstream_key_event ?KE_upstream .
+  ?KE_upstream dc:title ?KE_upstream_title .
+  ?KE_downstream dc:title ?KE_downstream_title .
+  ?aop a aopo:AdverseOutcomePathway ;
+       dc:title ?aop_title ;
+       aopo:has_adverse_outcome ?ao ;
+       aopo:has_molecular_initiating_event ?MIE .
+  ?ao dc:title ?ao_title .
+  ?MIE dc:title ?MIEtitle .
+}"""
+
             final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause)
         if query_type == "ke_downstream":
-            ke_query = """SELECT DISTINCT ?aop ?aop_title ?MIEtitle ?MIE ?KE_downstream ?KE_downstream_title ?KER ?ao ?ao_title ?KE_upstream ?KE_upstream_title
-                    WHERE {
-                      %VALUES_CLAUSE%
-                        
-                        ?KERx a aopo:KeyEventRelationship ;
-                             aopo:has_downstream_key_event ?KE_downstream_x ;
-                        ?aop aopo:has_key_event_relationship ?KERx .
-                        ?aop aopo:has_key_event_relationship ?KER .
-                        ?KER
-                             aopo:has_downstream_key_event ?KE_downstream ;
-                             aopo:has_upstream_key_event ?KE_upstream .
-                        ?KE_upstream dc:title ?KE_upstream_title .
-                        ?KE_downstream dc:title ?KE_downstream_title .
-                      ?aop a aopo:AdverseOutcomePathway ;
-                           dc:title ?aop_title ;
-                           aopo:has_adverse_outcome ?ao ;
-                           aopo:has_molecular_initiating_event ?MIE .
-                      ?ao dc:title ?ao_title .
-                      ?MIE dc:title ?MIEtitle .
-                    }
+            ke_query = """
+SELECT DISTINCT ?aop ?aop_title ?MIEtitle ?MIE ?KE_downstream ?KE_downstream_title ?KER ?ao ?ao_title ?KE_upstream ?KE_upstream_title
+WHERE {
+  %VALUES_CLAUSE%
+  ?KERx a aopo:KeyEventRelationship ;
+        aopo:has_downstream_key_event ?KE_downstream_x .
+  ?aop aopo:has_key_event_relationship ?KERx .
+  ?aop aopo:has_key_event_relationship ?KER .
+  ?KER aopo:has_downstream_key_event ?KE_downstream ;
+        aopo:has_upstream_key_event ?KE_upstream .
+  ?KE_upstream dc:title ?KE_upstream_title .
+  ?KE_downstream dc:title ?KE_downstream_title .
+  ?aop a aopo:AdverseOutcomePathway ;
+       dc:title ?aop_title ;
+       aopo:has_adverse_outcome ?ao ;
+       aopo:has_molecular_initiating_event ?MIE .
+  ?ao dc:title ?ao_title .
+  ?MIE dc:title ?MIEtitle .
+}
             """
             final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause)
 
