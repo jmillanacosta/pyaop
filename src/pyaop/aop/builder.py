@@ -464,6 +464,8 @@ class AOPNetworkBuilder:
         """Execute AOP SPARQL query and return structured result"""
         try:
             formatted_status = " ".join([f'\"{i}\"' for i in status])
+            if len(status) == 2:
+                formatted_status = ""
             query = self._aop_query_service.build_aop_sparql_query(
                 query_type, values, formatted_status
             )
