@@ -323,7 +323,7 @@ class AOPNetworkBuilder:
         self._bgee_query_service = BgeeQueryService()
 
     def query_by_identifier(
-        self, query_type: str, values: str, status: str
+        self, query_type: str, values: str, status: list
     ) -> tuple[AOPNetwork, str]:
         """
         Query AOP network data by identifier and return structured model.
@@ -460,9 +460,10 @@ class AOPNetworkBuilder:
             logger.error(f"Failed to query genes for network: {e}")
             return self.network, "# Gene query failed"
 
-    def _execute_aop_query(self, query_type: str, values: str, status: str) -> QueryResult:
+    def _execute_aop_query(self, query_type: str, values: str, status: list) -> QueryResult:
         """Execute AOP SPARQL query and return structured result"""
         try:
+            status = " ".join([f'{i}' for i in status])
             query = self._aop_query_service.build_aop_sparql_query(
                 query_type, values, status
             )
