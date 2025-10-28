@@ -63,6 +63,7 @@ class AOPQueryService(BaseQueryService):
             "aop": f"VALUES ?aop {{ {formatted_values} }}",
             "ke_upstream": f"VALUES ?KE_upstream_x {{ {formatted_values} }}",
             "ke_downstream": f"VALUES ?KE_downstream_x {{ {formatted_values} }}",
+            "ao": f"VALUES ?KE_downstream_x {{ {formatted_values} }}",
         }
 
         values_clause = values_clause_map.get(query_type)
@@ -106,14 +107,35 @@ WHERE {
   ?KE_downstream dc:title ?KE_downstream_title .
   ?aop a aopo:AdverseOutcomePathway ;
        dc:title ?aop_title ;
-       aopo:has_adverse_outcome ?ao ;
+       aopo:has_adverse_outcome ?ke_downstream ;
        aopo:has_molecular_initiating_event ?MIE .
   ?ao dc:title ?ao_title .
   ?MIE dc:title ?MIEtitle .
 }
             """
             final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause)
-
+        if query_type == "ao":
+            ke_query = """
+SELECT DISTINCT ?aop ?aop_title ?MIEtitle ?MIE ?KE_downstream ?KE_downstream_title ?KER ?ao ?ao_title ?KE_upstream ?KE_upstream_title
+WHERE {
+  %VALUES_CLAUSE%
+  ?KERx a aopo:KeyEventRelationship ;
+        aopo:has_downstream_key_event ?KE_downstream_x .
+  ?aop aopo:has_key_event_relationship ?KERx .
+  ?aop aopo:has_key_event_relationship ?KER .
+  ?KER aopo:has_downstream_key_event ?KE_downstream ;
+        aopo:has_upstream_key_event ?KE_upstream .
+  ?KE_upstream dc:title ?KE_upstream_title .
+  ?KE_downstream dc:title ?KE_downstream_title .
+  ?aop a aopo:AdverseOutcomePathway ;
+       dc:title ?aop_title ;
+       aopo:has_adverse_outcome ?ke_downstream ;
+       aopo:has_molecular_initiating_event ?MIE .
+  ?ao dc:title ?ao_title .
+  ?MIE dc:title ?MIEtitle .
+}
+            """
+            final_query = ke_query.replace("%VALUES_CLAUSE%", values_clause)
         else:
             final_query = base_query.replace("%VALUES_CLAUSE%", values_clause)
         logger.debug(f"Generated SPARQL query length: {len(final_query)}")
