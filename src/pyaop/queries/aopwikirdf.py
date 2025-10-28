@@ -61,7 +61,7 @@ class AOPQueryService(BaseQueryService):
           
         }"""
         if status:
-            status_values_clause = f"VALUES ?status {{'{status}' }}"
+            status_values_clause = f"VALUES ?status {{{status} }}"
             status_query = (
                 "?aop <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25688> ?status ."
             )
