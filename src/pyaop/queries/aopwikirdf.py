@@ -129,7 +129,8 @@ WHERE {
   ?KE_downstream dc:title ?KE_downstream_title .
   ?aop a aopo:AdverseOutcomePathway ;
        dc:title ?aop_title ;
-       aopo:has_adverse_outcome ?ke_downstream ;
+       aopo:has_adverse_outcome ?ao ;
+    FILTER (?ao = ?KE_downstream_x)
        aopo:has_molecular_initiating_event ?MIE .
   ?ao dc:title ?ao_title .
   ?MIE dc:title ?MIEtitle .
