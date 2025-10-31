@@ -10,6 +10,7 @@ import logging
 from typing import Any
 
 from pyaop.aop.associations import (
+    BiologicalProcessAssociation,
     ComponentAssociation,
     CompoundAssociation,
     GeneAssociation,
@@ -353,6 +354,43 @@ class AssociationProcessor(SPARQLResultProcessor):
             associations.append(association)
         return associations
 
+    def process_biological_process_associations(self, bindings: list[dict[str, Any]]) -> list[BiologicalProcessAssociation]:
+        """Process biological process association bindings.
+
+        Args:
+            bindings: List of SPARQL bindings.
+
+        Returns:
+            List of BiologicalProcessAssociation objects.
+        """
+        associations = []
+        for binding in bindings:
+            ke_uri = self.extract_binding_value(binding, "ke")
+            bp_uri = self.extract_binding_value(binding, "biological_process")
+            bp_name = self.extract_binding_value(binding, "biological_process_name")
+            if not ke_uri or not bp_uri:
+                continue
+            bp_node = CytoscapeNode(
+                id=bp_uri,
+                label=bp_name if bp_name else self.extract_id_from_uri(bp_uri),
+                node_type=NodeType.COMP_PROC.value,
+                classes="biological-process-node",
+                properties={
+                    "biological_process_id": bp_uri,
+                    "biological_process_name": bp_name,
+                },
+            )
+            edge = CytoscapeEdge(
+                id=f"{ke_uri}_{bp_uri}",
+                source=ke_uri,
+                target=bp_uri,
+                label=EdgeType.HAS_PROCESS.value,
+                properties={"type": EdgeType.HAS_PROCESS.value},
+            )
+            association = BiologicalProcessAssociation(ke_uri=ke_uri, bp_data=bp_node, edge_data=edge)
+            associations.append(association)
+        return associations
+
 
 class AOPNetworkBuilder:
     """
@@ -490,6 +528,23 @@ class AOPNetworkBuilder:
             self.network = self._build_network()
             return self.network, query_result.query
         return self.network, "# Gene query failed"
+
+    def query_biological_processes_for_kes(self) -> tuple[AOPNetwork, str]:
+        """Query biological processes for all KEs in the network.
+
+        Returns:
+            Tuple of AOPNetwork and query string.
+        """
+        ke_uris = self.network.get_ke_uris()
+        if not ke_uris:
+            logger.warning("No Key Events found for biological process querying")
+            return self.network, "# No KEs to query"
+        query_result = self._execute_biological_process_query(ke_uris)
+        if query_result.success:
+            self._process_biological_process_query_results(query_result.data)
+            self.network = self._build_network()
+            return self.network, query_result.query
+        return self.network, "# Biological process query failed"
 
     def _execute_aop_query(self, query_type: str, values: str, status: list[str]) -> QueryResult:
         """Execute AOP SPARQL query and return structured result.
@@ -680,6 +735,23 @@ class AOPNetworkBuilder:
         except QueryServiceError as e:
             return QueryResult(data={}, query="", success=False, error=str(e))
 
+    def _execute_biological_process_query(self, ke_uris: list[str]) -> QueryResult:
+        """Execute biological process association query.
+
+        Args:
+            ke_uris: List of key event URIs.
+
+        Returns:
+            QueryResult object.
+        """
+        try:
+            formatted_uris = " ".join([f"<{uri}>" for uri in ke_uris])
+            query = self._aop_query_service.build_biological_process_sparql_query(formatted_uris)
+            results = self._aop_query_service.execute_sparql_query(query)
+            return QueryResult(data=results, query=query, success=True)
+        except QueryServiceError as e:
+            return QueryResult(data={}, query="", success=False, error=str(e))
+
     def _process_compound_query_results(self, sparql_data: dict[str, Any]) -> None:
         """Process compound query results.
 
@@ -715,6 +787,18 @@ class AOPNetworkBuilder:
 
         for assoc in associations:
             self.network.add_component_association(assoc)
+
+    def _process_biological_process_query_results(self, sparql_data: dict[str, Any]) -> None:
+        """Process biological process query results.
+
+        Args:
+            sparql_data: SPARQL query results.
+        """
+        bindings = sparql_data.get("results", {}).get("bindings", [])
+        associations = self._assoc_processor.process_biological_process_associations(bindings)
+
+        for assoc in associations:
+            self.network.add_biological_process_association(assoc)
 
     def update_from_json(self, cytoscape_json: dict[str, Any]) -> AOPNetwork:
         """

@@ -281,6 +281,23 @@ WHERE {{
 ORDER BY ?ke
 """
 
+    def build_biological_process_sparql_query(self, ke_uris: str) -> str:
+        """Build SPARQL query for biological process data.
+
+        Args:
+            ke_uris: Key event URIs.
+
+        Returns:
+            SPARQL query string.
+        """
+        return f"""
+        SELECT DISTINCT ?ke ?biological_process ?biological_process_name WHERE {{
+            VALUES ?ke {{ {ke_uris} }}
+            ?ke a aopo:KeyEvent; <http://purl.obolibrary.org/obo/GO_0008150> ?biological_process .
+            ?biological_process dc:title ?biological_process_name .
+        }}
+        """
+
 
 # Global service instance
 aop_query_service: AOPQueryService = AOPQueryService()

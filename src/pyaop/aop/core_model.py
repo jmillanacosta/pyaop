@@ -14,6 +14,7 @@ from pyaop.aop.aop_info import (
 )
 from pyaop.aop.associations import (
     BaseAssociation,
+    BiologicalProcessAssociation,
     ComponentAssociation,
     CompoundAssociation,
     GeneAssociation,
@@ -36,6 +37,7 @@ __all__ = [
     "AOPKeyEvent",
     "AOPNetwork",
     "BaseAssociation",
+    "BiologicalProcessAssociation",
     "ComponentAssociation",
     "CompoundAssociation",
     "GeneAssociation",
@@ -56,6 +58,7 @@ class AOPNetwork:
         self.gene_associations: list[GeneAssociation] = []
         self.compound_associations: list[CompoundAssociation] = []
         self.organ_associations: list[OrganAssociation] = []
+        self.biological_process_associations: list[BiologicalProcessAssociation] = []
         self.aop_info: dict[str, AOPInfo] = {}
         self.node_list: list[CytoscapeNode] = []
         self.edge_list: list[CytoscapeEdge] = []
@@ -100,6 +103,7 @@ class AOPNetwork:
             (CompoundAssociation, self.compound_associations),
             (GeneExpressionAssociation, self.gene_expression_associations),
             (OrganAssociation, self.organ_associations),
+            (BiologicalProcessAssociation, self.biological_process_associations),
         ]
 
         # Parse each association type
@@ -240,8 +244,33 @@ class AOPNetwork:
         Args:
             association: ComponentAssociation to add.
         """
-        self.component_associations.append(association)
-        self._update_nodes_and_edges(association)
+        # Check if this is a biological process (GO_0008150)
+        if association.process.startswith("http://purl.obolibrary.org/obo/GO_0008150"):
+            # Create BiologicalProcessAssociation and add it instead
+            bp_node = CytoscapeNode(
+                id=association.process,
+                label=association.process_name,
+                node_type=NodeType.COMP_PROC.value,
+                classes="biological-process-node",
+                properties={
+                    "biological_process_id": association.process,
+                    "biological_process_name": association.process_name,
+                },
+            )
+            bp_edge = CytoscapeEdge(
+                id=f"{association.ke_uri}_{association.process}",
+                source=association.ke_uri,
+                target=association.process,
+                label=EdgeType.HAS_PROCESS.value,
+                properties={"type": EdgeType.HAS_PROCESS.value},
+            )
+            bp_association = BiologicalProcessAssociation(
+                ke_uri=association.ke_uri, bp_data=bp_node, edge_data=bp_edge
+            )
+            self.add_biological_process_association(bp_association)
+        else:
+            self.component_associations.append(association)
+            self._update_nodes_and_edges(association)
 
     def add_organ_association(self, association: OrganAssociation) -> None:
         """Add an organ association.
@@ -250,6 +279,15 @@ class AOPNetwork:
             association: OrganAssociation to add.
         """
         self.organ_associations.append(association)
+        self._update_nodes_and_edges(association)
+
+    def add_biological_process_association(self, association: BiologicalProcessAssociation) -> None:
+        """Add a biological process association.
+
+        Args:
+            association: BiologicalProcessAssociation to add.
+        """
+        self.biological_process_associations.append(association)
         self._update_nodes_and_edges(association)
 
     def _update_nodes_and_edges(self, association: BaseAssociation) -> None:
@@ -388,6 +426,10 @@ class AOPNetwork:
         for expr_assoc in self.gene_expression_associations:
             elements.extend(expr_assoc.to_cytoscape_elements())
 
+        # Add biological process associations
+        for bp_assoc in self.biological_process_associations:
+            elements.extend(bp_assoc.to_cytoscape_elements())
+
         # Prepare response with elements
         result: dict[str, Any] = {"elements": elements}
 
@@ -419,6 +461,7 @@ class AOPNetwork:
             "compound_associations": len(self.compound_associations),
             "component_associations": len(self.component_associations),
             "organ_associations": len(self.organ_associations),
+            "biological_process_associations": len(self.biological_process_associations),
             "total_aops": len(self.aop_info),
         }
 
@@ -460,6 +503,7 @@ class AOPNetwork:
         builder = ComponentTableBuilder(
             comp_assc=self.component_associations,
             organ_assc=self.organ_associations,
+            biological_process_assc=self.biological_process_associations,
             kes=self.key_events,
         )
         return builder.build_component_table()

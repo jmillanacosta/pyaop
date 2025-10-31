@@ -848,3 +848,77 @@ class OrganAssociation(BaseAssociation):
                 )
 
         return associations
+
+@dataclass
+class BiologicalProcessAssociation(BaseAssociation):
+    """Association between a Key Event and a biological process."""
+
+    ke_uri: str
+    bp_data: CytoscapeNode
+    edge_data: CytoscapeEdge
+
+    def get_nodes(self) -> list[CytoscapeNode]:
+        """Get the biological process node."""
+        return [self.bp_data]
+
+    def get_edges(self) -> list[CytoscapeEdge]:
+        """Get the edge from KE to biological process."""
+        return [self.edge_data]
+
+    def to_cytoscape_elements(self) -> list[dict[str, Any]]:
+        """Convert to Cytoscape elements."""
+        return [
+            {"data": self.bp_data.to_dict()},
+            {"data": self.edge_data.to_dict()},
+        ]
+
+    @classmethod
+    def from_cytoscape_elements(cls, elements: list[dict[str, Any]]) -> Sequence[BaseAssociation]:
+        """Parse Cytoscape elements back into BiologicalProcessAssociation objects.
+
+        Args:
+            elements: List of Cytoscape elements.
+
+        Returns:
+            List of BiologicalProcessAssociation objects.
+        """
+        associations = []
+
+        # Collect nodes and edges
+        bp_nodes = cls._collect_nodes_by_type(elements, [NodeType.COMP_PROC.value])
+        ke_edges = cls._collect_edges_by_type(elements, [EdgeType.HAS_PROCESS.value])
+
+        # Process KE - biological process associations
+        for edge in ke_edges:
+            source_uri = edge.get("source", "")
+            target_id = edge.get("target", "")
+
+            if cls._is_ke_uri(source_uri) and target_id in bp_nodes:
+                bp_data = bp_nodes[target_id]
+
+                # Find original element for classes
+                bp_element = next(
+                    (e for e in elements if e.get("data", {}).get("id") == target_id), {}
+                )
+
+                bp_node = CytoscapeNode(
+                    id=bp_data.get("id", ""),
+                    label=bp_data.get("label", ""),
+                    node_type=bp_data.get("type", ""),
+                    classes=bp_element.get("classes", ""),
+                    properties=bp_data,
+                )
+
+                edge_obj = CytoscapeEdge(
+                    id=edge.get("id", ""),
+                    source=edge.get("source", ""),
+                    target=edge.get("target", ""),
+                    label=edge.get("label", ""),
+                    properties=edge,
+                )
+
+                associations.append(
+                    cls(ke_uri=source_uri, bp_data=bp_node, edge_data=edge_obj)
+                )
+
+        return associations

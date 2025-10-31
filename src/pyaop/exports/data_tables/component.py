@@ -8,7 +8,7 @@ import logging
 from collections import defaultdict
 from typing import Any
 
-from pyaop.aop.associations import ComponentAssociation, OrganAssociation
+from pyaop.aop.associations import BiologicalProcessAssociation, ComponentAssociation, OrganAssociation
 from pyaop.aop.constants import NodeType
 from pyaop.aop.core_model import AOPKeyEvent
 
@@ -22,6 +22,7 @@ class ComponentTableBuilder:
         self,
         comp_assc: list[ComponentAssociation],
         organ_assc: list[OrganAssociation],
+        biological_process_assc: list[BiologicalProcessAssociation],
         kes: dict[str, AOPKeyEvent],
     ):
         """Initialize the builder with associations and key events.
@@ -29,10 +30,12 @@ class ComponentTableBuilder:
         Args:
             component_associations: List of ComponentAssociation objects.
             organ_assc: List of OrganAssociation objects.
+            biological_process_assc: List of BiologicalProcessAssociation objects.
             kes: Dictionary of key event URIs to AOPKeyEvent objects.
         """
         self.component_associations = comp_assc
         self.organ_associations = organ_assc
+        self.biological_process_associations = biological_process_assc
         self.key_events = kes
 
     def build_component_table(self) -> list[dict[str, Any]]:
@@ -41,8 +44,8 @@ class ComponentTableBuilder:
         Returns:
             List of dictionaries representing component table entries.
         """
-        ke_components, ke_organs = self._group_associations_by_ke()
-        all_associated_ke_uris = set(ke_components.keys()) | set(ke_organs.keys())
+        ke_components, ke_organs, ke_biological_processes = self._group_associations_by_ke()
+        all_associated_ke_uris = set(ke_components.keys()) | set(ke_organs.keys()) | set(ke_biological_processes.keys())
 
         table_entries = []
         for ke_uri in all_associated_ke_uris:
@@ -60,11 +63,11 @@ class ComponentTableBuilder:
 
     def _group_associations_by_ke(
         self,
-    ) -> tuple[dict[str, list[ComponentAssociation]], dict[str, list[OrganAssociation]]]:
+    ) -> tuple[dict[str, list[ComponentAssociation]], dict[str, list[OrganAssociation]], dict[str, list[BiologicalProcessAssociation]]]:
         """Group associations by KE URI.
 
         Returns:
-            Tuple of dictionaries: ke_components and ke_organs.
+            Tuple of dictionaries: ke_components, ke_organs, ke_biological_processes.
         """
         ke_components: dict[str, list[ComponentAssociation]] = defaultdict(list)
         for comp_assoc in self.component_associations:
@@ -74,7 +77,11 @@ class ComponentTableBuilder:
         for organ_assoc in self.organ_associations:
             ke_organs[organ_assoc.ke_uri].append(organ_assoc)
 
-        return ke_components, ke_organs
+        ke_biological_processes: dict[str, list[BiologicalProcessAssociation]] = defaultdict(list)
+        for bp_assoc in self.biological_process_associations:
+            ke_biological_processes[bp_assoc.ke_uri].append(bp_assoc)
+
+        return ke_components, ke_organs, ke_biological_processes
 
     def _build_action_processes_for_ke(
         self, ke_uri: str, ke_components: dict[str, list[ComponentAssociation]]
@@ -104,6 +111,24 @@ class ComponentTableBuilder:
                         "process_iri": comp_assoc.process,
                     }
                 )
+        
+        # Add biological process associations as action-process pairs
+        for bp_assoc in self.biological_process_associations:
+            if bp_assoc.ke_uri == ke_uri:
+                process_suffix = (
+                    bp_assoc.bp_data.id.split("/")[-1]
+                    if "/" in bp_assoc.bp_data.id
+                    else bp_assoc.bp_data.id
+                )
+                action_processes.append(
+                    {
+                        "action": "has_process",
+                        "process_id": f"process_{process_suffix}",
+                        "process_name": bp_assoc.bp_data.label,
+                        "process_iri": bp_assoc.bp_data.id,
+                    }
+                )
+        
         return action_processes
 
     def _build_organs_for_ke(
