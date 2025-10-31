@@ -33,10 +33,12 @@
     -->
 </p>
 
-
 ## About
 
-The `pyAOP` package serves as a toolkit for Adverse Outcome Pathway (AOP) integration and analysis. It provides functionalities to facilitate the construction, visualization, interpretation of AOP networks and their evidence types from various data sources.
+The `pyAOP` package serves as a toolkit for Adverse Outcome Pathway (AOP)
+integration and analysis. It provides functionalities to facilitate the
+construction, visualization, interpretation of AOP networks and their evidence
+types from various data sources.
 
 ## Installation
 
@@ -72,7 +74,6 @@ $ python3 -m pip install git+https://github.com/jmillanacosta/pyaop.git
 [CONTRIBUTING.md](https://github.com/jmillanacosta/pyaop/blob/master/.github/CONTRIBUTING.md)
 for more information on getting involved.
 
-
 ## License
 
 The code in this package is licensed under the MIT License.
@@ -83,10 +84,17 @@ The code in this package is licensed under the MIT License.
 Citation goes here
 -->
 
-
 ### Funding
 
-VHP4Safety – the Virtual Human Platform for safety assessment project NWA 1292.19.272 is part of the NWA research program ‘Research along Routes by Consortia (ORC)’, which is funded by the Netherlands Organization for Scientific Research (NWO). The project started on June 1, 2021 with a budget of over 10 million Euros and will last for the duration of 5 years.
+VHP4Safety – the Virtual Human Platform for safety assessment project NWA
+1292.19.272 is part of the NWA research program ‘Research along Routes by
+Consortia (ORC)’, which is funded by the Netherlands Organization for Scientific
+Research (NWO). The project started on June 1, 2021 with a budget of over 10
+million Euros and will last for the duration of 5 years.
 
-___
-Packaged with [cookiecutter](https://github.com/cookiecutter/cookiecutter) package; [cookiecutter-snekpack](https://github.com/cthoyt/cookiecutter-snekpack) template.
+---
+
+Packaged with [cookiecutter](https://github.com/cookiecutter/cookiecutter)
+package;
+[cookiecutter-snekpack](https://github.com/cthoyt/cookiecutter-snekpack)
+template.

@@ -1,29 +1,32 @@
 """
-Classes for AOP table.
+AOP Table class.
 
-Parse the AOPNetwork data model into AOP information tables.
+Parse relationships and key events into AOP information tables.
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Any
 
-from pyaop.aop.core_model import AOPNetwork, AOPKeyEvent, KeyEventRelationship
-from pyaop.aop.constants import NodeType
+from pyaop.aop.core_model import AOPKeyEvent, KeyEventRelationship
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class AOPRelationshipEntry:
-    """Represents an AOP relationship entry for the table"""
+    """Represents an AOP relationship entry for the table."""
 
     upstream_ke: AOPKeyEvent
     downstream_ke: AOPKeyEvent
     relationship: KeyEventRelationship
 
-    def to_table_entry(self) -> dict[str, str]:
-        """Convert to AOP table entry format"""
+    def to_table_entry(self) -> dict[str, Any]:
+        """Convert to AOP table entry format.
+
+        Returns:
+            Dictionary representing an AOP table entry.
+        """
         # Get all AOP info from both KEs
         all_aop_ids = set()
         all_aop_titles = set()
@@ -52,31 +55,44 @@ class AOPRelationshipEntry:
 
 
 class AOPTableBuilder:
-    """Builds AOP table data from AOPNetwork data model"""
+    """Builds AOP table data from relationships and key events."""
 
-    def __init__(self, network: AOPNetwork):
-        self.network = network
+    def __init__(
+        self, relationships: list[KeyEventRelationship], key_events: dict[str, AOPKeyEvent]
+    ):
+        """Initialize the builder with relationships and key events.
 
-    def build_aop_table(self) -> list[dict[str, str]]:
-        """Build AOP table using AOPNetwork data model"""
+        Args:
+            relationships: List of KeyEventRelationship objects.
+            key_events: Dictionary of key event URIs to AOPKeyEvent objects.
+        """
+        self.relationships = relationships
+        self.key_events = key_events
+
+    def build_aop_table(self) -> list[dict[str, bool | str | AOPRelationshipEntry]]:
+        """Build AOP table from relationships and key events.
+
+        Returns:
+            List of dictionaries for AOP table entries.
+        """
         table_entries = []
 
         # Process KER relationships
-        for relationship in self.network.relationships:
-            entry = AOPRelationshipEntry(
+        for relationship in self.relationships:
+            aop_rel_entry = AOPRelationshipEntry(
                 upstream_ke=relationship.upstream_ke,
                 downstream_ke=relationship.downstream_ke,
-                relationship=relationship
+                relationship=relationship,
             )
-            table_entries.append(entry.to_table_entry())
+            table_entries.append(aop_rel_entry.to_table_entry())
 
         # Process disconnected KEs (KEs not involved in any relationships)
         connected_ke_uris = set()
-        for rel in self.network.relationships:
+        for rel in self.relationships:
             connected_ke_uris.add(rel.upstream_ke.uri)
             connected_ke_uris.add(rel.downstream_ke.uri)
 
-        for ke_uri, ke in self.network.key_events.items():
+        for ke_uri, ke in self.key_events.items():
             if ke_uri not in connected_ke_uris:
                 # Create entry for disconnected KE
                 aop_ids = [f"AOP:{aop.aop_id}" for aop in ke.associated_aops]
@@ -86,11 +102,9 @@ class AOPTableBuilder:
                     "source_id": ke.uri,
                     "source_label": ke.title,
                     "source_type": ke.ke_type.value,
-                    "aop_list": ",".join(sorted(aop_ids)) if aop_ids else "N/A",
-                    "aop_titles": "; ".join(sorted(aop_titles)) if aop_titles else "N/A",
+                    "aop_list": ",".join(sorted(aop_ids)) if aop_ids else "",
+                    "aop_titles": "; ".join(sorted(aop_titles)) if aop_titles else "",
                     "is_connected": False,
                 }
                 table_entries.append(entry)
-
-        logger.info(f"Built AOP table with {len(table_entries)} entries from data model")
         return table_entries

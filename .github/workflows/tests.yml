@@ -36,7 +36,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: "Run command"
         run: |
-          uvx -p ${{ matrix.python-version }} --with tox-uv tox -e ${{ matrix.tox-command }}
+            yes | uvx -p ${{ matrix.python-version }} --with tox-uv tox -e ${{ matrix.tox-command }}
 
   docs:
     name: Documentation

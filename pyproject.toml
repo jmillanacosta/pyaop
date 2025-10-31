@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "pyaop"
 version = "0.0.1-dev"
-description = ""
+description = "Package for working with Adverse Outcome Pathways (AOPs) in Python."
 readme = "README.md"
 authors = [
     { name = "Javier Millan Acosta", email = "javier.millanacosta@maastrichtuniversity.nl" }
@@ -205,6 +205,9 @@ extend-select = [
 ignore = [
     "D105", # Missing docstring in magic method
     "E203", # Black conflicts with the following
+    "E501",
+    "T201",
+    "F821"
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores

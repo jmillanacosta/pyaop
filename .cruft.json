@@ -6,7 +6,7 @@
     "cookiecutter": {
       "package_name": "pyaop",
       "package_name_stylized": "pyAOP",
-      "short_description": "",
+      "short_description": "Package for working with Adverse Outcome Pathways (AOPs) in Python",
       "author_name": "Javier Millan Acosta",
       "author_github": "jmillanacosta",
       "author_email": "javier.millanacosta@maastrichtuniversity.nl",

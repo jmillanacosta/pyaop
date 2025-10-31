@@ -34,7 +34,7 @@ parsed_version = re.match(
 version = parsed_version.expand(r"\g<major>.\g<minor>.\g<patch>")
 
 if parsed_version.group("release"):
-    tags.add("prerelease")  # noqa:F821
+    tags.add("prerelease")
 
 
 # See https://about.readthedocs.com/blog/2024/07/addons-by-default/
@@ -77,7 +77,6 @@ extensions = [
     "sphinx_automodapi.smart_resolver",
     # 'texext',
 ]
-
 
 
 # generate autosummary pages

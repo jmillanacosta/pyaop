@@ -13,13 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 class AOPStyleManager:
-    """Manages base Cytoscape styles for AOP networks"""
+    """Manages base Cytoscape styles for AOP networks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize the style manager."""
         self.base_styles = self._create_base_styles()
 
     def _create_base_styles(self) -> list[dict[str, Any]]:
-        """Create the base Cytoscape styles"""
+        """Create the base Cytoscape styles.
+
+        Returns:
+            List of style dictionaries.
+        """
         return [
             # Default node styles
             {
@@ -43,16 +48,25 @@ class AOPStyleManager:
                 },
             },
             # MIE nodes - use type selector
-            {"selector": f"node[type='{NodeType.MIE.value}']", "style": {"background-color": "#ccffcc"}},
+            {
+                "selector": f"node[type='{NodeType.MIE.value}']",
+                "style": {"background-color": "#ccffcc"},
+            },
             # AO nodes - use type selector
-            {"selector": f"node[type='{NodeType.AO.value}']", "style": {"background-color": "#ffe6e6"}},
+            {
+                "selector": f"node[type='{NodeType.AO.value}']",
+                "style": {"background-color": "#ffe6e6"},
+            },
             # UniProt nodes - use type selector
             {
                 "selector": f"node[type='{NodeType.PROTEIN.value}']",
                 "style": {"background-color": "#ffff99"},
             },
             # Ensembl nodes - use type selector
-            {"selector": f"node[type='{NodeType.GENE.value}']", "style": {"background-color": "#ffcc99"}},
+            {
+                "selector": f"node[type='{NodeType.GENE.value}']",
+                "style": {"background-color": "#ffcc99"},
+            },
             # Chemical nodes
             {
                 "selector": f"node[type='{NodeType.CHEMICAL.value}'], .chemical-node",
@@ -226,7 +240,7 @@ class AOPStyleManager:
             },
             # Process nodes
             {
-                "selector": f"node[type='{NodeType.COMPONENT_PROCESS.value}'], .process-node",
+                "selector": f"node[type='{NodeType.COMP_PROC.value}'], .process-node",
                 "style": {
                     "shape": "roundrectangle",
                     "width": "320px",
@@ -249,7 +263,7 @@ class AOPStyleManager:
             },
             # Object nodes
             {
-                "selector": f"node[type='{NodeType.COMPONENT_OBJECT.value}'], .object-node",
+                "selector": f"node[type='{NodeType.COMP_PROC.value}'], .object-node",
                 "style": {
                     "shape": "roundrectangle",
                     "width": "280px",
@@ -462,27 +476,39 @@ class AOPStyleManager:
         ]
 
     def get_styles(self) -> list[dict[str, Any]]:
-        """Get base styles"""
+        """Get base styles.
+
+        Returns:
+            List of style dictionaries.
+        """
         return self.base_styles
 
     def get_layout_config(self) -> dict[str, Any]:
-        """Get default layout configuration"""
-        return {
-            "name": "breadthfirst",
-            "directed": True,
-            "padding": 30
-        }
+        """Get default layout configuration.
+
+        Returns:
+            Dictionary with layout configuration.
+        """
+        return {"name": "breadthfirst", "directed": True, "padding": 30}
 
 
 # Global style manager instance
-default_style_manager = AOPStyleManager()
+default_style_manager: AOPStyleManager = AOPStyleManager()
 
 
 def get_default_styles() -> list[dict[str, Any]]:
-    """Get default AOP styles"""
+    """Get default AOP styles.
+
+    Returns:
+        List of style dictionaries.
+    """
     return default_style_manager.get_styles()
 
 
 def get_layout_config() -> dict[str, Any]:
-    """Get default layout configuration"""
+    """Get default layout configuration.
+
+    Returns:
+        Dictionary with layout configuration.
+    """
     return default_style_manager.get_layout_config()

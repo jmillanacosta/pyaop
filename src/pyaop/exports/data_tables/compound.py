@@ -1,37 +1,43 @@
-"""
-Classes for Compound table.
-
-Generate AOP compound (stressor) tables from AOPNetwork data model.
-"""
+"""Generate AOP compound (stressor) tables from compound associations."""
 
 import logging
 
-from pyaop.aop.core_model import AOPNetwork
+from pyaop.aop.associations import CompoundAssociation
 
 logger = logging.getLogger(__name__)
 
-class CompoundTableBuilder:
-    """Builds compound table data from AOPNetwork data model"""
 
-    def __init__(self, network: AOPNetwork):
-        self.network = network
+class CompoundTableBuilder:
+    """Builds compound table data from compound associations."""
+
+    def __init__(self, compound_associations: list[CompoundAssociation]):
+        """Initialize the builder with compound associations.
+
+        Args:
+            compound_associations: List of CompoundAssociation objects to build the table from.
+        """
+        self.compound_associations = compound_associations
 
     def build_compound_table(self) -> list[dict[str, str]]:
-        """Build compound table from network compound associations"""
+        """Build compound table from compound associations.
+
+        Returns:
+            List of dictionaries representing compound table entries.
+        """
         table_entries = []
         seen_compounds = set()
 
-        for assoc in self.network.compound_associations:
+        for assoc in self.compound_associations:
             # Extract compound identifiers
             pubchem_id = (
-                assoc.pubchem_compound.split("/")[-1] 
-                if "/" in assoc.pubchem_compound 
+                assoc.pubchem_compound.split("/")[-1]
+                if "/" in assoc.pubchem_compound
                 else assoc.pubchem_compound
             )
-            
+
             compound_name = assoc.compound_name or assoc.chemical_label
             compound_key = f"{compound_name}_{pubchem_id}"
-            
+
             if compound_key not in seen_compounds:
                 entry = {
                     "compound_name": compound_name,
@@ -45,6 +51,4 @@ class CompoundTableBuilder:
                 }
                 table_entries.append(entry)
                 seen_compounds.add(compound_key)
-
-        logger.info(f"Built compound table with {len(table_entries)} entries from data model")
         return table_entries
